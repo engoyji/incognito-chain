@@ -1,8 +1,15 @@
 package rpcserver
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 	"github.com/pkg/errors"
 )
@@ -137,4 +144,44 @@ func createMarshalledSubResponse(subRequest *SubcriptionRequest, result interfac
 		return nil, err
 	}
 	return resultResp, nil
+}
+
+//returnBinaryDataResponse ...
+func returnBinaryDataResponse(request *JsonRequest, result interface{}, replyErr error, w http.ResponseWriter, buf *bufio.ReadWriter) error {
+
+	file, ok := result.(*os.File)
+	if !ok {
+		return errors.New("Result is not a file")
+	}
+
+	defer file.Close()
+
+	//File is found, create and send the correct headers
+
+	//Get the Content-Type of the file
+	//Create a buffer to store the header of the file in
+	FileHeader := make([]byte, 512)
+	//Copy the headers into the FileHeader buffer
+	file.Read(FileHeader)
+	//Get content type of file
+	FileContentType := http.DetectContentType(FileHeader)
+
+	//Get the file size
+	FileStat, _ := file.Stat()                         //Get info from file
+	FileSize := strconv.FormatInt(FileStat.Size(), 10) //Get file size as a string
+
+	strs := strings.Split(file.Name(), "/")
+
+	//Send the headers
+	w.Header().Set("Content-Disposition", "attachment; fileName="+strs[len(strs)-1])
+	w.Header().Set("Content-Type", FileContentType)
+	w.Header().Set("Content-Length", FileSize)
+
+	//Send the file
+	//We read 512 bytes from the file already, so we reset the offset back to 0
+	file.Seek(0, 0)
+
+	io.Copy(buf, file) //'Copy' the file to the client
+
+	return nil
 }

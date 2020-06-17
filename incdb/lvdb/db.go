@@ -5,11 +5,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -245,6 +246,25 @@ func (db *db) Batch(data []incdb.BatchData) leveldb.Batch {
 	return *batch
 }
 
+////Uncompress file from zip file
+//func Uncompress(fd *os.File) {
+//
+//	//// uncompress write
+//	////Remove all old data
+//	//fd, _ := os.Open(backupFile)
+//	//if err := os.RemoveAll("/data/untar"); err != nil {
+//	//	panic(err)
+//	//}
+//	////Create new data
+//	//if err := os.MkdirAll("/data/untar", 0700); err != nil {
+//	//	panic(err)
+//	//}
+//
+//	if err := uncompress(fd, "/data/untar/"); err != nil {
+//		fmt.Println(err)
+//	}
+//}
+
 func (db *db) Backup(backupFile string) {
 	backupFile = filepath.Join(db.dbPath, backupFile)
 	fmt.Println("backupFile", backupFile)
@@ -256,30 +276,17 @@ func (db *db) Backup(backupFile string) {
 	}
 
 	// write the .tar.gzip
-	if err := os.MkdirAll(filepath.Dir(backupFile), 0666); err != nil {
+	if err := os.MkdirAll(filepath.Dir(backupFile), 0700); err != nil {
 		panic(err)
 	}
 	fmt.Println("mkdir ", filepath.Dir(backupFile))
-	fileToWrite, err := os.OpenFile(backupFile, os.O_CREATE|os.O_RDWR, os.FileMode(600))
+	fileToWrite, err := os.OpenFile(backupFile, os.O_CREATE|os.O_RDWR, 0700)
 	if err != nil {
 		panic(err)
 	}
 	if _, err := io.Copy(fileToWrite, &buf); err != nil {
 		panic(err)
 	}
-
-	// untar write
-	//fd, _ := os.Open(backupFile)
-	//if err := os.RemoveAll("/data/untar"); err != nil {
-	//	panic(err)
-	//}
-	//if err := os.MkdirAll("/data/untar", 0666); err != nil {
-	//	panic(err)
-	//}
-	//
-	//if err := uncompress(fd, "/data/untar/"); err != nil {
-	//	fmt.Println(err)
-	//}
 }
 
 func compress(src string, buf io.Writer) error {

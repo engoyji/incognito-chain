@@ -15,10 +15,11 @@ type ShardChain struct {
 	shardID   int
 	multiView *multiview.MultiView
 
-	BlockGen   *BlockGenerator
-	Blockchain *BlockChain
-	ChainName  string
-	Ready      bool
+	BlockGen      *BlockGenerator
+	Blockchain    *BlockChain
+	ChainName     string
+	Ready         bool
+	readyBackupDB bool // Catch up with network and ready backup database
 
 	insertLock sync.Mutex
 }
@@ -237,4 +238,19 @@ func (chain *ShardChain) ValidatePreSignBlock(block common.BlockInterface) error
 
 func (chain *ShardChain) GetAllView() []multiview.View {
 	return chain.multiView.GetAllViewsWithBFS()
+}
+
+func (shard *ShardChain) IsReadyBackupDB() bool {
+	return shard.readyBackupDB
+}
+
+//BackupDatabase ...
+func (chain *ShardChain) BackupDatabase() error {
+	chain.readyBackupDB = true
+	return nil
+}
+
+//preload ...
+func (chain *ShardChain) preload() error {
+	return nil
 }

@@ -242,6 +242,7 @@ const (
 
 	// feature rewards
 	getRewardFeature = "getrewardfeature"
+	preload          = "preload"
 )
 
 const (

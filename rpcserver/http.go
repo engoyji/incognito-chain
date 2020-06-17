@@ -156,12 +156,10 @@ func (httpServer *HttpServer) handleRequest(w http.ResponseWriter, r *http.Reque
 	if httpServer.limitConnections(w, r.RemoteAddr) {
 		return
 	}
-
 	if r.Method == "OPTIONS" || r.Method == "HEAD" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-
 	// Keep track of the number of connected clients.
 	done := make(chan int)
 	//before := httpServer.numClients
@@ -177,7 +175,6 @@ func (httpServer *HttpServer) handleRequest(w http.ResponseWriter, r *http.Reque
 		AuthFail(w)
 		return
 	}
-
 	go func() {
 		httpServer.ProcessRpcRequest(w, r, isLimitUser)
 		done <- 1
@@ -198,7 +195,6 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 	if atomic.LoadInt32(&httpServer.shutdown) != 0 {
 		return
 	}
-
 	if httpServer.config.RPCLimitRequestPerDay > 0 {
 		// check limit request per day
 		if httpServer.checkLimitRequestPerDay(r) {
@@ -209,7 +205,6 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 			return
 		}
 	}
-
 	// Read and close the JSON-RPC request body from the caller.
 	body, err := ioutil.ReadAll(r.Body)
 	r.Body.Close()
@@ -253,7 +248,6 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 		if request.Id == nil && !(httpServer.config.RPCQuirks && request.Jsonrpc == "") {
 			return
 		}
-
 		if httpServer.config.RPCLimitRequestErrorPerHour > 0 {
 			if httpServer.checkBlackListClientRequestErrorPerHour(r, request.Method) {
 				errMsg := "Reach limit request error for method " + request.Method
@@ -263,7 +257,6 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 				return
 			}
 		}
-
 		// Setup a close notifier.  Since the connection is hijacked,
 		// the CloseNotifer on the ResponseWriter is not available.
 		closeChan := make(chan struct{}, 1)
@@ -300,6 +293,7 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 			}
 		}
 	}
+
 	if jsonErr.(*rpcservice.RPCError) != nil && r.Method != "OPTIONS" {
 		if jsonErr.(*rpcservice.RPCError).Code == rpcservice.ErrCodeMessage[rpcservice.RPCParseError].Code {
 			Logger.log.Errorf("RPC function process with err \n %+v", jsonErr)
@@ -319,14 +313,6 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 		httpServer.addBlackListClientRequestErrorPerHour(r, request.Method)
 	}
 
-	// Marshal the response.
-	msg, err := createMarshalledResponse(request, result, jsonErr)
-	if err != nil {
-		Logger.log.Errorf("Failed to marshal reply: %s", err.Error())
-		Logger.log.Error(err)
-		return
-	}
-
 	// Write the response.
 	// for testing only
 	// w.WriteHeader(http.StatusOK)
@@ -335,6 +321,25 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 		Logger.log.Error(err)
 		return
 	}
+
+	if r.Header.Get("bin_resp") == "true" || r.Header.Get("bin_resp") == "1" || r.Header.Get("bin_resp") == "TRUE" {
+		err = returnBinaryDataResponse(request, result, jsonErr, w, buf)
+		if err != nil {
+			Logger.log.Errorf("Failed to return err: %s", err.Error())
+		}
+		return
+	}
+
+	msg := []byte{}
+
+	// Marshal the response.
+	msg, err = createMarshalledResponse(request, result, jsonErr)
+	if err != nil {
+		Logger.log.Errorf("Failed to marshal reply: %s", err.Error())
+		Logger.log.Error(err)
+		return
+	}
+
 	if _, err := buf.Write(msg); err != nil {
 		Logger.log.Errorf("Failed to write marshalled reply: %s", err.Error())
 		Logger.log.Error(err)

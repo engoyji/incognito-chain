@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 
 	"github.com/incognitochain/incognito-chain/blockchain/btc"
 	"github.com/incognitochain/incognito-chain/common"
@@ -1454,11 +1455,24 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 	beaconStoreBlockTimer.UpdateSince(startTimeProcessStoreBeaconBlock)
 
 	//backup
-	//if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
-	//	blockchain.GetBeaconChainDatabase().Close()
-	//	blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
-	//	blockchain.GetBeaconChainDatabase().ReOpen()
-	//}
+
+	if blockchain.config.ChainParams.IsBackup {
+		if !blockchain.BeaconChain.IsReadyBackupDB() {
+			if blockchain.config.ChainParams.IsBackupFromGenesis {
+				if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
+					blockchain.GetBeaconChainDatabase().Close()
+					blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
+					blockchain.GetBeaconChainDatabase().ReOpen()
+				}
+			}
+		} else {
+			if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
+				blockchain.GetBeaconChainDatabase().Close()
+				blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
+				blockchain.GetBeaconChainDatabase().ReOpen()
+			}
+		}
+	}
 
 	return nil
 }

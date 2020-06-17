@@ -117,7 +117,7 @@ var ErrCodeMessage = map[int]struct {
 	JsonError:           {-4, "Json error"},
 
 	// validate component -1xxx
-	RPCInvalidRequestError:                {-1001, "Invalid request"},
+	RPCInvalidRequestError:                {-1001, "Invalid request"}, // @tin check here
 	RPCMethodNotFoundError:                {-1002, "Method not found"},
 	RPCInvalidParamsError:                 {-1003, "Invalid parameters"},
 	RPCInternalError:                      {-1004, "Internal error"},

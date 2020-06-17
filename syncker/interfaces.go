@@ -61,6 +61,7 @@ type Chain interface {
 	GetCommittee() []incognitokey.CommitteePublicKey
 	CurrentHeight() uint64
 	InsertBlk(block common.BlockInterface, shouldValidate bool) error
+	BackupDatabase() error
 }
 
 const (

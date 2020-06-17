@@ -16,7 +16,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/jessevdk/go-flags"
 )
 
 // default config
@@ -151,6 +150,27 @@ type config struct {
 
 	// Highway
 	Libp2pPrivateKey string `long:"libp2pprivatekey" description:"Private key used to create node's PeerID, empty to generate random key each run"`
+
+	// Backup database and preload
+	Backup            string `long:"backup" description:"Active backup database"`
+	Preload           string `long:"preload" description:"Active preload database"`
+	BackupFromGenesis string `long:"backupfromgenesis" description:"Active backup database from genesis block"`
+	PreloadFromAddr   string `long:"preloadFromAddr" description:"Preload from address"`
+}
+
+//IsBackupFromGenesis
+func (cfg config) IsBackupFromGenesis() bool {
+	return cfg.BackupFromGenesis == "true" || cfg.BackupFromGenesis == "T" || cfg.BackupFromGenesis == "t" || cfg.BackupFromGenesis == "1"
+}
+
+//IsPreload
+func (cfg config) IsPreload() bool {
+	return cfg.Preload == "true" || cfg.Preload == "T" || cfg.Preload == "t" || cfg.Preload == "1"
+}
+
+//IsBackup ...
+func (cfg config) IsBackup() bool {
+	return cfg.Backup == "true" || cfg.Backup == "T" || cfg.Backup == "t" || cfg.Backup == "1"
 }
 
 func (cfg config) IsTestnet() bool {
@@ -436,11 +456,6 @@ func loadConfig() (*config, []string, error) {
 		activeNetParams = &testNetParams
 	}
 
-	if numNets > 1 {
-		Logger.log.Error("The testnet, regtest, segnet, and simnet component can't be used together -- choose one of the four")
-		os.Exit(common.ExitCodeUnknow)
-	}
-
 	// Append the network type to the data directory so it is "namespaced"
 	// per network.  In addition to the block database, there are other
 	// pieces of data that are saved to disk such as address manager state.
@@ -647,6 +662,25 @@ func loadConfig() (*config, []string, error) {
 	if configFileError != nil {
 		spew.Dump(configFileError)
 	}
+
+	if cfg.IsBackup() {
+		activeNetParams.IsBackup = true
+	}
+
+	if cfg.IsPreload() {
+		activeNetParams.IsPreload = true
+		activeNetParams.PreloadFromAddr = cfg.PreloadFromAddr
+	}
+
+	if cfg.IsBackupFromGenesis() {
+		activeNetParams.IsBackupFromGenesis = true
+	}
+
+	if numNets > 1 {
+		Logger.log.Error("The testnet, regtest, segnet, and simnet component can't be used together -- choose one of the four")
+		os.Exit(common.ExitCodeUnknow)
+	}
+
 	return &cfg, remainingArgs, nil
 }
 

@@ -14,10 +14,11 @@ import (
 type BeaconChain struct {
 	multiView *multiview.MultiView
 
-	BlockGen   *BlockGenerator
-	Blockchain *BlockChain
-	ChainName  string
-	Ready      bool //when has peerstate
+	BlockGen      *BlockGenerator
+	Blockchain    *BlockChain
+	ChainName     string
+	Ready         bool //when has peerstate
+	readyBackupDB bool // Catch up with network and ready backup database
 
 	insertLock sync.Mutex
 }
@@ -288,4 +289,15 @@ func (chain *BeaconChain) UnmarshalBlock(blockString []byte) (common.BlockInterf
 
 func (chain *BeaconChain) GetAllView() []multiview.View {
 	return chain.multiView.GetAllViewsWithBFS()
+}
+
+//IsReadyBackupDB ...
+func (chain *BeaconChain) IsReadyBackupDB() bool {
+	return chain.readyBackupDB
+}
+
+//BackupDatabase ...
+func (chain *BeaconChain) BackupDatabase() error {
+	chain.readyBackupDB = true
+	return nil
 }

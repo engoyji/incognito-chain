@@ -63,6 +63,10 @@ type Params struct {
 	BNBFullNodeProtocol              string
 	BNBFullNodeHost                  string
 	BNBFullNodePort                  string
+	IsPreload                        bool
+	IsBackup                         bool
+	IsBackupFromGenesis              bool
+	PreloadFromAddr 				 string
 	PortalParams                     map[uint64]PortalParams
 }
 
@@ -147,6 +151,7 @@ func init() {
 				MinPercentRedeemFee:                  0.01,
 			},
 		},
+		// IsBackup: true,
 	}
 	// END TESTNET
 	// FOR MAINNET

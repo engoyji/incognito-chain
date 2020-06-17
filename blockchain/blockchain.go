@@ -101,9 +101,21 @@ func (blockchain *BlockChain) Init(config *Config) error {
 // database.  When the db does not yet contain any chain state, both it and the
 // chain state are initialized to the genesis block.
 func (blockchain *BlockChain) initChainState() error {
+
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
 	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
+	//FOR TESTING ONLY
+	// Preload data from a trusted full node
+
+	if blockchain.config.ChainParams.IsPreload {
+		err := preloadDatabase(255, "", 1)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	///
 	if err := blockchain.RestoreBeaconViews(); err != nil {
 		Logger.log.Error("debug restore beacon fail, init", err)
 		err := blockchain.initBeaconState()
@@ -138,6 +150,15 @@ func (blockchain *BlockChain) initChainState() error {
 // the genesis block, so it must only be called on an uninitialized database.
 */
 func (blockchain *BlockChain) initShardState(shardID byte) error {
+
+	//FOR TESTING ONLY
+	// Preload data from a trusted full node
+	err := blockchain.ShardChain[shardID].preload()
+	if err != nil {
+		panic(err)
+	}
+	///
+
 	// fmt.Println("[optimize-beststate] Blockchain.initShardState()")
 	initShardState := NewBestStateShardWithConfig(shardID, blockchain.config.ChainParams)
 	// Create a new block from genesis block and set it as best block of chain

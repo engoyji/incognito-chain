@@ -223,6 +223,9 @@ var HttpHandler = map[string]httpHandler{
 
 	// feature reward
 	getRewardFeature: (*HttpServer).handleGetRewardFeature,
+
+	// ===========Preload, backup ======
+	preload: (*HttpServer).handlePreloadRequest,
 }
 
 // Commands that are available to a limited user

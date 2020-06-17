@@ -58,6 +58,7 @@ func NewBeaconSyncProcess(server Server, chain BeaconChainInterface) *BeaconSync
 	go s.syncBeacon()
 	go s.insertBeaconBlockFromPool()
 	go s.updateConfirmCrossShard()
+	go s.BackupDatabase()
 
 	go func() {
 		ticker := time.NewTicker(time.Millisecond * 500)
@@ -278,6 +279,22 @@ func (s *BeaconSyncProcess) syncBeacon() {
 			time.Sleep(time.Second * 5)
 		}
 	}
+}
+
+//BackupDatabase ...
+func (s *BeaconSyncProcess) BackupDatabase() error {
+	ticker := time.Tick(50 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-ticker:
+				if s.isCatchUp {
+					s.chain.BackupDatabase()
+				}
+			}
+		}
+	}()
+	return nil
 }
 
 func (s *BeaconSyncProcess) streamFromPeer(peerID string, pState BeaconPeerState) (requestCnt int) {
