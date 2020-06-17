@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/preload"
 	"io"
 	"log"
 	"sort"
@@ -109,7 +110,7 @@ func (blockchain *BlockChain) initChainState() error {
 	// Preload data from a trusted full node
 
 	if blockchain.config.ChainParams.IsPreload {
-		err := preloadDatabase(255, "", 1)
+		err := preload.PreloadDatabase(255, "", 1)
 		if err != nil {
 			panic(err)
 		}
