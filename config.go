@@ -16,6 +16,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/jessevdk/go-flags"
 )
 
 // default config
