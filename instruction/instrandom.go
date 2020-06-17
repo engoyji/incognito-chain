@@ -6,7 +6,6 @@ import (
 
 //Random Instruction which get nonce from bitcoin block
 type RandomInst struct {
-	_type          uint
 	btcNonce       uint64
 	btcBlockHeight uint64
 	checkpointTime uint64
@@ -14,14 +13,12 @@ type RandomInst struct {
 }
 
 func NewRandomInst() *RandomInst {
-	s := &RandomInst{
-		_type: I_RANDOM,
-	}
+	s := &RandomInst{}
 	return s
 }
 
 func (s *RandomInst) GetType() uint {
-	return s._type
+	return I_RANDOM
 }
 
 func (s *RandomInst) SetNonce(n uint64) *RandomInst {
