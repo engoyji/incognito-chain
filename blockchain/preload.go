@@ -105,20 +105,25 @@ func preloadDatabase(shardID int, url string, preloadDir string) error {
 			path += "/shard" + strconv.Itoa(shardID)
 		}
 
-		fmt.Println("[backup-database] 'File-Name':", resp.Header.Get("File-Name"))
+		defer resp.Body.Close()
 
-		//os.Create()
+		//Remove all old data
+		if err := os.RemoveAll(path); err != nil {
+			panic(err)
+		}
+		//Create new data
+		if err := os.MkdirAll(path, 0700); err != nil {
+			panic(err)
+		}
 
-		file, err := os.OpenFile(path + "/" + resp.Header.Get("File-Name"), os.O_WRONLY|os.O_CREATE, 0700)
+		file, err := os.Create(path + "/" + resp.Header.Get("File-Name"))
 		if err != nil {
 			return err
 		}
+		defer file.Close()
+		io.Copy(file, resp.Body)
 
-		if _, err := io.Copy(file, resp.Body); err != nil {
-			return err
-		}
-
-		err = Uncompress(path)
+		err = Uncompress(path + "/" + resp.Header.Get("File-Name"))
 		if err != nil {
 			return err
 		}
