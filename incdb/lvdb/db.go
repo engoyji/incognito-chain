@@ -6,8 +6,10 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -246,25 +248,6 @@ func (db *db) Batch(data []incdb.BatchData) leveldb.Batch {
 	return *batch
 }
 
-////Uncompress file from zip file
-//func Uncompress(fd *os.File) {
-//
-//	//// uncompress write
-//	////Remove all old data
-//	//fd, _ := os.Open(backupFile)
-//	//if err := os.RemoveAll("/data/untar"); err != nil {
-//	//	panic(err)
-//	//}
-//	////Create new data
-//	//if err := os.MkdirAll("/data/untar", 0700); err != nil {
-//	//	panic(err)
-//	//}
-//
-//	if err := uncompress(fd, "/data/untar/"); err != nil {
-//		fmt.Println(err)
-//	}
-//}
-
 func (db *db) Backup(backupFile string) {
 	backupFile = filepath.Join(db.dbPath, backupFile)
 	fmt.Println("backupFile", backupFile)
@@ -287,6 +270,40 @@ func (db *db) Backup(backupFile string) {
 	if _, err := io.Copy(fileToWrite, &buf); err != nil {
 		panic(err)
 	}
+
+	if err := removeUnusedBackupDatabase(backupFile); err != nil {
+		panic(err)
+	}
+}
+
+//removeUnusedBackupDatabase ...
+// for remove unused databases in backup folder
+func removeUnusedBackupDatabase(filePath string) error {
+	strs := strings.Split(filePath, "/")
+	epoch, err := strconv.Atoi(strs[len(strs)-1])
+	if err != nil {
+		return err
+	}
+
+	path := filePath
+	for i := len(path) - 1; i>-1; i-- {
+		if path[i] != '/'{
+			path = path[:len(path)-1]
+		} else {
+			log.Println(1)
+			break
+		}
+	}
+
+	if epoch > 2 {
+		path += strconv.Itoa(epoch - 2)
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func compress(src string, buf io.Writer) error {

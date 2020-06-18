@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/preload"
 	"io"
 	"log"
 	"sort"
@@ -108,15 +107,14 @@ func (blockchain *BlockChain) initChainState() error {
 	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
 	//FOR TESTING ONLY
 	// Preload data from a trusted full node
-
 	if blockchain.config.ChainParams.IsPreload {
-		err := preload.PreloadDatabase(255, "", 1)
+		err := preloadDatabase(255, "")
 		if err != nil {
 			panic(err)
 		}
 	}
-
 	///
+
 	if err := blockchain.RestoreBeaconViews(); err != nil {
 		Logger.log.Error("debug restore beacon fail, init", err)
 		err := blockchain.initBeaconState()

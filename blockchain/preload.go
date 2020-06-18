@@ -1,11 +1,10 @@
-package preload
+package blockchain
 
 import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/incognitochain/incognito-chain/utility/httprequest"
 	"io"
 	"io/ioutil"
@@ -40,82 +39,90 @@ type JsonResponse struct {
 	Jsonrpc string               `json:"Jsonrpc"`
 }
 
-//PreloadDatabase ...
-func PreloadDatabase(shardID int, url string, epoch uint64) error {
+//preloadDatabase call to backuped database node ...
+func preloadDatabase(shardID int, url string) error {
 
-	for {
-		//Send a json http request to backup database node
-		header := http.Header{}
-		header.Set("Content-Type", "application/json")
-		req := JsonRequest{
-			Jsonrpc: "2.0",
-			Method:  "preload",
-			Params:  []int{shardID, int(epoch)},
-			Id:      0,
-		}
+	//Send a json http request to backup database node
+	header := http.Header{}
+	header.Set("Content-Type", "application/json")
+	req := JsonRequest{
+		Jsonrpc: "2.0",
+		Method:  "preload",
+		Params:  []int{shardID},
+		Id:      0,
+	}
 
-		fmt.Println(req)
+	bodyReq, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
 
-		bodyReq, err := json.Marshal(req)
+	resp, err := httprequest.Send(url, "POST", header, bodyReq)
+	if err != nil {
+		return err
+	}
+
+	//Receive response and prepare for handling
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("Error in preloading data, start normal sync")
+	}
+
+	defer resp.Body.Close()
+
+	if resp.Header.Get("Content-Type") == "application/json" {
+		//Json response mean can't get file
+		// Reason could be backup database is caught up
+		// or error in sending http process
+
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
 
-		resp, err := httprequest.Send(url, "POST", header, bodyReq)
+		jsonRes := JsonResponse{}
+
+		err = json.Unmarshal(body, &jsonRes)
 		if err != nil {
-			continue
+			return err
 		}
 
-		//Receive response and prepare for handling
-
-		if resp.StatusCode != http.StatusOK {
-			return errors.New("Error in preloading data, start normal sync")
+		if jsonRes.Error.Code != -1001{
+			return errors.New("Wrong status code from backup database node")
 		}
 
-		defer resp.Body.Close()
+		return errors.New("Data is not available from this node")
 
-		if resp.Header.Get("Content-Type") == "application/json" {
-			//Json response mean can't get file
-			// Reason could be backup database is caught up
-			// or error in sending http process
-
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return err
-			}
-
-			jsonRes := JsonResponse{}
-
-			err = json.Unmarshal(body, &jsonRes)
-			if err != nil {
-				return err
-			}
-
-			if jsonRes.Error.Code != -1001{
-				return errors.New("Wrong status code from backup database node")
-			}
-			break
+	} else {
+		//Receive binary file
+		// Read and Uncompress it
+		file := &os.File{}
+		if _, err := io.Copy(file, resp.Body); err != nil {
+			return err
+		}
+		path := "./data/untar"
+		if shardID == - 1 || shardID == 255 {
+			path += "/beacon"
 		} else {
-			//Receive binary file
-			file := &os.File{}
-			if _, err := io.Copy(file, resp.Body); err != nil {
-				return err
-			}
-			path := "./data/untar"
-			if shardID == - 1 || shardID == 255 {
-				path += "/beacon"
-			} else {
-				path += "/shard" + strconv.Itoa(shardID)
-			}
-			err = Uncompress(file, path)
-			if err != nil {
-				return err
-			}
+			path += "/shard" + strconv.Itoa(shardID)
+		}
+		err = Uncompress(file, path)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
+
+////PreloadDatabase ...
+//func PreloadDatabase(shardID int, url string) error {
+//	err := preloadDatabase(shardID, url)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 //Uncompress file from zip file
 func Uncompress(fd *os.File, path string) error {
@@ -167,7 +174,7 @@ func uncompress(src io.Reader, dst string) error {
 		// if its a dir and it doesn't exist create it (with 0755 permission)
 		case tar.TypeDir:
 			if _, err := os.Stat(target); err != nil {
-				if err := os.MkdirAll(target, 0755); err != nil {
+				if err := os.MkdirAll(target, 0700); err != nil {
 					return err
 				}
 			}
