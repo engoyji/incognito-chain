@@ -1,10 +1,8 @@
 package rpcserver
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -147,14 +145,12 @@ func createMarshalledSubResponse(subRequest *SubcriptionRequest, result interfac
 }
 
 //returnBinaryDataResponse ...
-func returnBinaryDataResponse(request *JsonRequest, result interface{}, replyErr error, w http.ResponseWriter, buf *bufio.ReadWriter) error {
+func returnBinaryDataResponse(result interface{}, replyErr error, w http.ResponseWriter) (*os.File, error) {
 
 	file, ok := result.(*os.File)
 	if !ok {
-		return errors.New("Result is not a file")
+		return nil, errors.New("Result is not a file")
 	}
-
-	defer file.Close()
 
 	//File is found, create and send the correct headers
 
@@ -162,7 +158,10 @@ func returnBinaryDataResponse(request *JsonRequest, result interface{}, replyErr
 	//Create a buffer to store the header of the file in
 	FileHeader := make([]byte, 512)
 	//Copy the headers into the FileHeader buffer
-	file.Read(FileHeader)
+	_, err := file.Read(FileHeader)
+	if err != nil {
+		return nil, err
+	}
 	//Get content type of file
 	FileContentType := http.DetectContentType(FileHeader)
 
@@ -173,15 +172,17 @@ func returnBinaryDataResponse(request *JsonRequest, result interface{}, replyErr
 	strs := strings.Split(file.Name(), "/")
 
 	//Send the headers
+	w.Header().Set("File-Name", strs[len(strs)-1])
 	w.Header().Set("Content-Disposition", "attachment; fileName="+strs[len(strs)-1])
 	w.Header().Set("Content-Type", FileContentType)
 	w.Header().Set("Content-Length", FileSize)
 
 	//Send the file
 	//We read 512 bytes from the file already, so we reset the offset back to 0
-	file.Seek(0, 0)
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
 
-	io.Copy(buf, file) //'Copy' the file to the client
-
-	return nil
+	return file, err
 }

@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -22,7 +23,8 @@ func (httpServer *HttpServer) handlePreloadRequest(params interface{}, closeChan
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Shard ID component invalid"))
 	}
 
-	filePath := "./data/full_node/backup"
+	//filePath := "./data/full_node/backup"
+	filePath := httpServer.config.ChainParams.BackupDir
 	if shardID == -1 || shardID == 255 {
 		filePath += "/beacon"
 	} else {
@@ -32,6 +34,7 @@ func (httpServer *HttpServer) handlePreloadRequest(params interface{}, closeChan
 	//Get needed epoch to download
 	dirs, err := ioutil.ReadDir(filePath)
 	if err != nil {
+		fmt.Println("[backup-database] {HttpServer.handlePreloadRequest()} err:", err)
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
 	}
 
@@ -39,9 +42,16 @@ func (httpServer *HttpServer) handlePreloadRequest(params interface{}, closeChan
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidRequestError, errors.New("Request data is not available"))
 	}
 
-	latestEpoch, err := strconv.Atoi(dirs[len(dirs) - 1].Name())
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
+	latestEpoch := 0
+
+	for _, file := range dirs {
+		tempEpoch, err := strconv.Atoi(file.Name())
+		if err != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
+		}
+		if tempEpoch > latestEpoch {
+			latestEpoch = tempEpoch
+		}
 	}
 
 	filePath = filePath + "/" + strconv.Itoa(int(latestEpoch))
@@ -65,3 +75,7 @@ func openFile(filePath string) (*os.File, error) {
 
 	return file, nil
 }
+
+//func getHeaderFromFile(w http.ResponseWriter) {
+//	w.Header().Set()
+//}

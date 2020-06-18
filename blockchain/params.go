@@ -67,6 +67,8 @@ type Params struct {
 	IsBackup                         bool
 	IsBackupFromGenesis              bool
 	PreloadFromAddr 				 string
+	PreloadDir 						 string
+	BackupDir 						 string
 	PortalParams                     map[uint64]PortalParams
 }
 

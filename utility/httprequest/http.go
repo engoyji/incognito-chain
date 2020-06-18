@@ -10,10 +10,11 @@ func Send(url, method string, header http.Header, body []byte) (*http.Response, 
 
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 
-	req.Header = header
+	if err != nil {
+		return nil, err
+	}
 
-	// req.Header.Set("X-Custom-Header", "myvalue")
-	// req.Header.Set("Content-Type", "application/json")
+	req.Header = header
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

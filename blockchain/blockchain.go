@@ -105,10 +105,11 @@ func (blockchain *BlockChain) initChainState() error {
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
 	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
+
 	//FOR TESTING ONLY
 	// Preload data from a trusted full node
 	if blockchain.config.ChainParams.IsPreload {
-		err := preloadDatabase(255, "")
+		err := preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir)
 		if err != nil {
 			panic(err)
 		}

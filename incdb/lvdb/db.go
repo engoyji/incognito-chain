@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -280,11 +281,14 @@ func (db *db) Backup(backupFile string) {
 // for remove unused databases in backup folder
 func removeUnusedBackupDatabase(filePath string) error {
 	strs := strings.Split(filePath, "/")
-	epoch, err := strconv.Atoi(strs[len(strs)-1])
+
+	//Get latest epoch
+	latestEpoch, err := strconv.Atoi(strs[len(strs)-1])
 	if err != nil {
 		return err
 	}
 
+	//Get path directory of this file
 	path := filePath
 	for i := len(path) - 1; i>-1; i-- {
 		if path[i] != '/'{
@@ -295,11 +299,30 @@ func removeUnusedBackupDatabase(filePath string) error {
 		}
 	}
 
-	if epoch > 2 {
-		path += strconv.Itoa(epoch - 2)
-		err = os.Remove(path)
+	//Get needed epoch to download
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+
+	if len(files) == 0 {
+		return err
+	}
+
+	//Get file name and compare with latest epoch
+	for _, file := range files{
+
+		epoch, err := strconv.Atoi(file.Name())
 		if err != nil {
 			return err
+		}
+
+		if epoch != latestEpoch && epoch != latestEpoch - 1{
+			name := path + "/" + file.Name()
+			err = os.Remove(name)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

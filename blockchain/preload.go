@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/incognitochain/incognito-chain/utility/httprequest"
 	"io"
 	"io/ioutil"
@@ -40,16 +41,17 @@ type JsonResponse struct {
 }
 
 //preloadDatabase call to backuped database node ...
-func preloadDatabase(shardID int, url string) error {
+func preloadDatabase(shardID int, url string, preloadDir string) error {
 
 	//Send a json http request to backup database node
 	header := http.Header{}
 	header.Set("Content-Type", "application/json")
+	header.Set("bin_resp", "true")
 	req := JsonRequest{
 		Jsonrpc: "2.0",
 		Method:  "preload",
 		Params:  []int{shardID},
-		Id:      0,
+		Id:      1,
 	}
 
 	bodyReq, err := json.Marshal(req)
@@ -81,32 +83,42 @@ func preloadDatabase(shardID int, url string) error {
 		}
 
 		jsonRes := JsonResponse{}
-
 		err = json.Unmarshal(body, &jsonRes)
 		if err != nil {
 			return err
 		}
 
 		if jsonRes.Error.Code != -1001{
+			fmt.Println("pkg blockchain {preloadDatabase} jsonRes.Error.Code:", jsonRes.Error.Code)
 			return errors.New("Wrong status code from backup database node")
 		}
-
 		return errors.New("Data is not available from this node")
-
 	} else {
 		//Receive binary file
 		// Read and Uncompress it
-		file := &os.File{}
-		if _, err := io.Copy(file, resp.Body); err != nil {
-			return err
-		}
-		path := "./data/untar"
-		if shardID == - 1 || shardID == 255 {
+
+		//"./data/untar"
+		path := preloadDir
+		if shardID == -1 || shardID == 255 {
 			path += "/beacon"
 		} else {
 			path += "/shard" + strconv.Itoa(shardID)
 		}
-		err = Uncompress(file, path)
+
+		fmt.Println("[backup-database] 'File-Name':", resp.Header.Get("File-Name"))
+
+		//os.Create()
+
+		file, err := os.OpenFile(path + "/" + resp.Header.Get("File-Name"), os.O_WRONLY|os.O_CREATE, 0700)
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(file, resp.Body); err != nil {
+			return err
+		}
+
+		err = Uncompress(path)
 		if err != nil {
 			return err
 		}
@@ -125,18 +137,18 @@ func preloadDatabase(shardID int, url string) error {
 //}
 
 //Uncompress file from zip file
-func Uncompress(fd *os.File, path string) error {
+func Uncompress(path string) error {
 
-	//// uncompress write
-	////Remove all old data
-	//fd, _ := os.Open(backupFile)
-	//if err := os.RemoveAll("/data/untar"); err != nil {
-	//	panic(err)
-	//}
-	////Create new data
-	//if err := os.MkdirAll("/data/untar", 0700); err != nil {
-	//	panic(err)
-	//}
+	//uncompress write
+	//Remove all old data
+	fd, _ := os.Open(path)
+	if err := os.RemoveAll(path); err != nil {
+		panic(err)
+	}
+	//Create new data
+	if err := os.MkdirAll(path, 0700); err != nil {
+		panic(err)
+	}
 
 	if err := uncompress(fd, path); err != nil {
 		return err

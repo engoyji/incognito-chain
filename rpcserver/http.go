@@ -313,20 +313,29 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 		httpServer.addBlackListClientRequestErrorPerHour(r, request.Method)
 	}
 
-	// Write the response.
-	// for testing only
-	// w.WriteHeader(http.StatusOK)
-	err = httpServer.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
-	if err != nil {
-		Logger.log.Error(err)
-		return
-	}
-
 	if r.Header.Get("bin_resp") == "true" || r.Header.Get("bin_resp") == "1" || r.Header.Get("bin_resp") == "TRUE" {
-		err = returnBinaryDataResponse(request, result, jsonErr, w, buf)
+		file, err := returnBinaryDataResponse(result, jsonErr, w)
 		if err != nil {
 			Logger.log.Errorf("Failed to return err: %s", err.Error())
+			return
 		}
+
+		defer file.Close()
+
+		// Write the response.
+		// for testing only
+		// w.WriteHeader(http.StatusOK)
+		err = httpServer.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
+		if err != nil {
+			Logger.log.Error(err)
+			return
+		}
+
+		_, err = io.Copy(buf, file) //'Copy' the file to the client
+		if err != nil {
+			Logger.log.Error(err)
+		}
+
 		return
 	}
 
@@ -336,6 +345,15 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 	msg, err = createMarshalledResponse(request, result, jsonErr)
 	if err != nil {
 		Logger.log.Errorf("Failed to marshal reply: %s", err.Error())
+		Logger.log.Error(err)
+		return
+	}
+
+	// Write the response.
+	// for testing only
+	// w.WriteHeader(http.StatusOK)
+	err = httpServer.writeHTTPResponseHeaders(r, w.Header(), http.StatusOK, buf)
+	if err != nil {
 		Logger.log.Error(err)
 		return
 	}
