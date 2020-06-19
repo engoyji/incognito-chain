@@ -75,7 +75,3 @@ func openFile(filePath string) (*os.File, error) {
 
 	return file, nil
 }
-
-//func getHeaderFromFile(w http.ResponseWriter) {
-//	w.Header().Set()
-//}

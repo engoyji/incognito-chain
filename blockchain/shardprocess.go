@@ -1101,6 +1101,32 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 	}
 	shardStoreBlockTimer.UpdateSince(startTimeProcessStoreShardBlock)
 	Logger.log.Infof("SHARD %+v | 🔎 %d transactions in block height %+v \n", shardBlock.Header.ShardID, len(shardBlock.Body.Transactions), blockHeight)
+
+	//Backup
+
+	if !blockchain.config.ChainParams.IsBackup{
+		return nil
+	}
+
+	if !blockchain.config.ChainParams.IsBackupFromGenesis {
+		if !blockchain.ShardChain[newShardState.ShardID].IsReadyBackupDB() {
+			return nil
+		}
+	}
+
+	if (newShardState.ShardHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
+
+		err := blockchain.GetShardChainDatabase(newShardState.ShardID).Close()
+		if err != nil {
+			return err
+		}
+		blockchain.GetShardChainDatabase(newShardState.ShardID).Backup(fmt.Sprintf("../../../backup/shard%d/%d", newShardState.ShardID,newShardState.Epoch))
+		err = blockchain.GetShardChainDatabase(newShardState.ShardID).ReOpen()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -1456,22 +1456,20 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 
 	//backup
 
-	if blockchain.config.ChainParams.IsBackup {
-		if !blockchain.BeaconChain.IsReadyBackupDB() {
-			if blockchain.config.ChainParams.IsBackupFromGenesis {
-				if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
-					blockchain.GetBeaconChainDatabase().Close()
-					blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
-					blockchain.GetBeaconChainDatabase().ReOpen()
-				}
-			}
-		} else {
-			if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
-				blockchain.GetBeaconChainDatabase().Close()
-				blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
-				blockchain.GetBeaconChainDatabase().ReOpen()
-			}
+	if !blockchain.config.ChainParams.IsBackup{
+		return nil
+	}
+
+	if !blockchain.config.ChainParams.IsBackupFromGenesis {
+		if !blockchain.BeaconChain.IsReadyBackupDB(){
+			return nil
 		}
+	}
+
+	if (newBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
+		blockchain.GetBeaconChainDatabase().Close()
+		blockchain.GetBeaconChainDatabase().Backup(fmt.Sprintf("../../../backup/beacon/%d", newBestState.Epoch))
+		blockchain.GetBeaconChainDatabase().ReOpen()
 	}
 
 	return nil

@@ -97,7 +97,6 @@ func preloadDatabase(shardID int, url string, preloadDir string) error {
 		//Receive binary file
 		// Read and Uncompress it
 
-		//"./data/untar"
 		path := preloadDir
 		if shardID == -1 || shardID == 255 {
 			path += "/beacon"
