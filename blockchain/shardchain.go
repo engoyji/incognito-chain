@@ -249,8 +249,3 @@ func (chain *ShardChain) BackupDatabase() error {
 	chain.readyBackupDB = true
 	return nil
 }
-
-//preload ...
-func (chain *ShardChain) preload() error {
-	return nil
-}

@@ -681,6 +681,8 @@ func loadConfig() (*config, []string, error) {
 		activeNetParams.IsBackupFromGenesis = true
 	}
 
+	activeNetParams.DataDir = filepath.Join(cfg.DataDir, cfg.DatabaseDir)
+
 	if numNets > 1 {
 		Logger.log.Error("The testnet, regtest, segnet, and simnet component can't be used together -- choose one of the four")
 		os.Exit(common.ExitCodeUnknow)

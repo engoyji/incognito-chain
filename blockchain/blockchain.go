@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 
 	"github.com/incognitochain/incognito-chain/multiview"
@@ -45,6 +44,7 @@ type Config struct {
 	MemCache          *memcache.MemoryCache
 	Interrupt         <-chan struct{}
 	ChainParams       *Params
+	GenesisParams     *GenesisParams
 	RelayShards       []byte
 	NodeMode          string
 	BlockGen          *BlockGenerator
@@ -109,9 +109,11 @@ func (blockchain *BlockChain) initChainState() error {
 	//FOR TESTING ONLY
 	// Preload data from a trusted full node
 	if blockchain.config.ChainParams.IsPreload {
-		err := preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir)
+		//blockchain.config.ChainParams.
+		err := preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
 		if err != nil {
-			panic(err)
+			Logger.log.Error(err)
+			//panic(err)
 		}
 	}
 	///
@@ -130,6 +132,15 @@ func (blockchain *BlockChain) initChainState() error {
 	for shard := 1; shard <= blockchain.GetBeaconBestState().ActiveShards; shard++ {
 		shardID := byte(shard - 1)
 		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
+
+		if blockchain.config.ChainParams.IsPreload {
+			err := preloadDatabase(int(shardID), blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
+			if err != nil {
+				Logger.log.Error(err)
+				//panic(err)
+			}
+		}
+
 		if err := blockchain.RestoreShardViews(shardID); err != nil {
 			Logger.log.Error("debug restore shard fail, init")
 			err := blockchain.initShardState(shardID)
@@ -150,15 +161,6 @@ func (blockchain *BlockChain) initChainState() error {
 // the genesis block, so it must only be called on an uninitialized database.
 */
 func (blockchain *BlockChain) initShardState(shardID byte) error {
-
-	//FOR TESTING ONLY
-	// Preload data from a trusted full node
-	err := blockchain.ShardChain[shardID].preload()
-	if err != nil {
-		panic(err)
-	}
-	///
-
 	// fmt.Println("[optimize-beststate] Blockchain.initShardState()")
 	initShardState := NewBestStateShardWithConfig(shardID, blockchain.config.ChainParams)
 	// Create a new block from genesis block and set it as best block of chain
@@ -198,7 +200,7 @@ func (blockchain *BlockChain) initShardState(shardID byte) error {
 func (blockchain *BlockChain) initBeaconState() error {
 	initBeaconBestState := NewBeaconBestStateWithConfig(blockchain.config.ChainParams)
 	initBlock := blockchain.config.ChainParams.GenesisBeaconBlock
-	err := initBeaconBestState.initBeaconBestState(initBlock, blockchain.GetBeaconChainDatabase())
+	err := initBeaconBestState.initBeaconBestState(initBlock, blockchain, blockchain.GetBeaconChainDatabase())
 	if err != nil {
 		return err
 	}
@@ -368,10 +370,10 @@ func (blockchain *BlockChain) BackupShardChain(writer io.Writer, shardID byte) e
 			return err
 		}
 		if i%100 == 0 {
-			log.Printf("Backup Shard %+v Block %+v", shardBlock.Header.ShardID, i)
+			Logger.log.Infof("Backup Shard %+v Block %+v", shardBlock.Header.ShardID, i)
 		}
 		if i == bestShardHeight-1 {
-			log.Printf("Finish Backup Shard %+v with Block %+v", shardBlock.Header.ShardID, i)
+			Logger.log.Infof("Finish Backup Shard %+v with Block %+v", shardBlock.Header.ShardID, i)
 		}
 	}
 	return nil
@@ -406,10 +408,10 @@ func (blockchain *BlockChain) BackupBeaconChain(writer io.Writer) error {
 			return err
 		}
 		if i%100 == 0 {
-			log.Printf("Backup Beacon Block %+v", i)
+			Logger.log.Infof("Backup Beacon Block %+v", i)
 		}
 		if i == bestBeaconHeight-1 {
-			log.Printf("Finish Backup Beacon with Block %+v", i)
+			Logger.log.Infof("Finish Backup Beacon with Block %+v", i)
 		}
 	}
 	return nil

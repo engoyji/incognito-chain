@@ -41,7 +41,7 @@ type JsonResponse struct {
 }
 
 //preloadDatabase call to backuped database node ...
-func preloadDatabase(shardID int, url string, preloadDir string) error {
+func preloadDatabase(chainID int, url string, preloadDir string, dataDir string) error {
 
 	//Send a json http request to backup database node
 	header := http.Header{}
@@ -50,7 +50,7 @@ func preloadDatabase(shardID int, url string, preloadDir string) error {
 	req := JsonRequest{
 		Jsonrpc: "2.0",
 		Method:  "preload",
-		Params:  []int{shardID},
+		Params:  []int{chainID},
 		Id:      1,
 	}
 
@@ -61,6 +61,7 @@ func preloadDatabase(shardID int, url string, preloadDir string) error {
 
 	resp, err := httprequest.Send(url, "POST", header, bodyReq)
 	if err != nil {
+		fmt.Println("[backup-database] {preloadDatabase} send request err:", err)
 		return err
 	}
 
@@ -90,62 +91,26 @@ func preloadDatabase(shardID int, url string, preloadDir string) error {
 
 		if jsonRes.Error.Code != -1001{
 			fmt.Println("pkg blockchain {preloadDatabase} jsonRes.Error.Code:", jsonRes.Error.Code)
-			return errors.New("Wrong status code from backup database node")
-		}
-		return errors.New("Data is not available from this node")
-	} else {
-		//Receive binary file
-		// Read and Uncompress it
-
-		path := preloadDir
-		if shardID == -1 || shardID == 255 {
-			path += "/beacon"
-		} else {
-			path += "/shard" + strconv.Itoa(shardID)
-		}
-
-		defer resp.Body.Close()
-
-		//Remove all old data
-		if err := os.RemoveAll(path); err != nil {
-			panic(err)
-		}
-		//Create new data
-		if err := os.MkdirAll(path, 0700); err != nil {
-			panic(err)
-		}
-
-		file, err := os.Create(path + "/" + resp.Header.Get("File-Name"))
-		if err != nil {
 			return err
 		}
-		defer file.Close()
-		io.Copy(file, resp.Body)
-
-		err = Uncompress(path + "/" + resp.Header.Get("File-Name"))
-		if err != nil {
-			return err
-		}
+		return nil
 	}
 
-	return nil
-}
+	//Receive binary file
+	// Read and Uncompress it
 
-////PreloadDatabase ...
-//func PreloadDatabase(shardID int, url string) error {
-//	err := preloadDatabase(shardID, url)
-//	if err != nil {
-//		return err
-//	}
-//	return nil
-//}
+	path := preloadDir
+	if chainID == -1 || chainID == 255 {
+		path += "/beacon"
+		dataDir += "/beacon"
+	} else {
+		path += "/shard" + strconv.Itoa(chainID)
+		dataDir += "/shard" + strconv.Itoa(chainID)
+	}
 
-//Uncompress file from zip file
-func Uncompress(path string) error {
+	defer resp.Body.Close()
 
-	//uncompress write
 	//Remove all old data
-	fd, _ := os.Open(path)
 	if err := os.RemoveAll(path); err != nil {
 		panic(err)
 	}
@@ -154,7 +119,47 @@ func Uncompress(path string) error {
 		panic(err)
 	}
 
-	if err := uncompress(fd, path); err != nil {
+	file, err := os.Create(path + "/" + resp.Header.Get("File-Name"))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = io.Copy(file, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	err = Uncompress(path + "/" + resp.Header.Get("File-Name"), dataDir)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//Uncompress file from zip file
+func Uncompress(srcPath, desPath string) error {
+
+	//uncompress write
+	//Remove all old data
+	fd, _ := os.Open(srcPath)
+	if err := os.RemoveAll(srcPath); err != nil {
+		panic(err)
+	}
+	//Create new data
+	if err := os.MkdirAll(srcPath, 0700); err != nil {
+		panic(err)
+	}
+
+	if err := os.RemoveAll(desPath); err != nil {
+		panic(err)
+	}
+	//Create new data
+	if err := os.MkdirAll(desPath, 0700); err != nil {
+		panic(err)
+	}
+
+	if err := uncompress(fd, desPath); err != nil {
 		return err
 	}
 	return nil
