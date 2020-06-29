@@ -4,13 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"reflect"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -28,7 +29,7 @@ import (
 
 type ShardBestState struct {
 	BestBlockHash          common.Hash                       `json:"BestBlockHash"` // hash of block.
-	BestBlock              *ShardBlock                       `json:"BestBlock"`     // block data
+	BestBlock              *ShardBlock                       `json:"-"`             // block data
 	BestBeaconHash         common.Hash                       `json:"BestBeaconHash"`
 	BeaconHeight           uint64                            `json:"BeaconHeight"`
 	ShardID                byte                              `json:"ShardID"`
@@ -37,10 +38,10 @@ type ShardBestState struct {
 	MaxShardCommitteeSize  int                               `json:"MaxShardCommitteeSize"`
 	MinShardCommitteeSize  int                               `json:"MinShardCommitteeSize"`
 	ShardProposerIdx       int                               `json:"ShardProposerIdx"`
-	ShardCommittee         []incognitokey.CommitteePublicKey `json:"ShardCommittee"`
-	ShardPendingValidator  []incognitokey.CommitteePublicKey `json:"ShardPendingValidator"`
+	ShardCommittee         []incognitokey.CommitteePublicKey `json:"-"`
+	ShardPendingValidator  []incognitokey.CommitteePublicKey `json:"-"`
 	BestCrossShard         map[byte]uint64                   `json:"BestCrossShard"` // Best cross shard block by heigh
-	StakingTx              map[string]string                 `json:"StakingTx"`
+	StakingTx              map[string]string                 `json:"-"`
 	NumTxns                uint64                            `json:"NumTxns"`                // The number of txns in the block.
 	TotalTxns              uint64                            `json:"TotalTxns"`              // The total number of txns in the chain.
 	TotalTxnsExcludeSalary uint64                            `json:"TotalTxnsExcludeSalary"` // for testing and benchmark
@@ -342,11 +343,30 @@ func (shardBestState *ShardBestState) cloneShardBestStateFrom(target *ShardBestS
 	if reflect.DeepEqual(*shardBestState, ShardBestState{}) {
 		return NewBlockChainError(CloneShardBestStateError, fmt.Errorf("Shard Best State %+v clone failed", target.ShardHeight))
 	}
+	if shardBestState.StakingTx == nil {
+		shardBestState.StakingTx = map[string]string{}
+	}
+	for k, v := range target.StakingTx {
+		shardBestState.StakingTx[k] = v
+	}
 	shardBestState.consensusStateDB = target.consensusStateDB.Copy()
 	shardBestState.transactionStateDB = target.transactionStateDB.Copy()
 	shardBestState.featureStateDB = target.featureStateDB.Copy()
 	shardBestState.rewardStateDB = target.rewardStateDB.Copy()
 	shardBestState.slashStateDB = target.slashStateDB.Copy()
+
+	shardBestState.BestBlock = target.BestBlock
+
+	shardBestState.ShardCommittee = make([]incognitokey.CommitteePublicKey, len(target.ShardCommittee))
+	for i, v := range target.ShardCommittee {
+		shardBestState.ShardCommittee[i] = v
+	}
+
+	shardBestState.ShardPendingValidator = make([]incognitokey.CommitteePublicKey, len(target.ShardPendingValidator))
+	for i, v := range target.ShardPendingValidator {
+		shardBestState.ShardPendingValidator[i] = v
+	}
+
 	return nil
 }
 

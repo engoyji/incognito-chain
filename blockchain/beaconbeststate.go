@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"reflect"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/incdb"
+	"github.com/incognitochain/incognito-chain/privacy"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -28,22 +30,23 @@ import (
 
 type BeaconBestState struct {
 	BestBlockHash                          common.Hash                                `json:"BestBlockHash"`         // The hash of the block.
-	PreviousBestBlockHash                  common.Hash                                `json:"PreviousBestBlockHash"` // The hash of the block.
-	BestBlock                              BeaconBlock                                `json:"BestBlock"`             // The block.
+	PreviousBestBlockHash                  common.Hash                                `json:"PreviousBestBlockHash"` // The hash of the block. [remove]
+	BestBlock                              BeaconBlock                                `json:"-"`                     // The block.
 	BestShardHash                          map[byte]common.Hash                       `json:"BestShardHash"`
 	BestShardHeight                        map[byte]uint64                            `json:"BestShardHeight"`
 	Epoch                                  uint64                                     `json:"Epoch"`
 	BeaconHeight                           uint64                                     `json:"BeaconHeight"`
 	BeaconProposerIndex                    int                                        `json:"BeaconProposerIndex"`
-	BeaconCommittee                        []incognitokey.CommitteePublicKey          `json:"BeaconCommittee"`
-	BeaconPendingValidator                 []incognitokey.CommitteePublicKey          `json:"BeaconPendingValidator"`
-	CandidateShardWaitingForCurrentRandom  []incognitokey.CommitteePublicKey          `json:"CandidateShardWaitingForCurrentRandom"` // snapshot shard candidate list, waiting to be shuffled in this current epoch
-	CandidateBeaconWaitingForCurrentRandom []incognitokey.CommitteePublicKey          `json:"CandidateBeaconWaitingForCurrentRandom"`
-	CandidateShardWaitingForNextRandom     []incognitokey.CommitteePublicKey          `json:"CandidateShardWaitingForNextRandom"` // shard candidate list, waiting to be shuffled in next epoch
-	CandidateBeaconWaitingForNextRandom    []incognitokey.CommitteePublicKey          `json:"CandidateBeaconWaitingForNextRandom"`
-	ShardCommittee                         map[byte][]incognitokey.CommitteePublicKey `json:"ShardCommittee"`        // current committee and validator of all shard
-	ShardPendingValidator                  map[byte][]incognitokey.CommitteePublicKey `json:"ShardPendingValidator"` // pending candidate waiting for swap to get in committee of all shard
-	AutoStaking                            map[string]bool                            `json:"AutoStaking"`
+	BeaconCommittee                        []incognitokey.CommitteePublicKey          `json:"-"`
+	BeaconPendingValidator                 []incognitokey.CommitteePublicKey          `json:"-"`
+	CandidateShardWaitingForCurrentRandom  []incognitokey.CommitteePublicKey          `json:"-"` // snapshot shard candidate list, waiting to be shuffled in this current epoch
+	CandidateBeaconWaitingForCurrentRandom []incognitokey.CommitteePublicKey          `json:"-"`
+	CandidateShardWaitingForNextRandom     []incognitokey.CommitteePublicKey          `json:"-"` // shard candidate list, waiting to be shuffled in next epoch
+	CandidateBeaconWaitingForNextRandom    []incognitokey.CommitteePublicKey          `json:"-"`
+	ShardCommittee                         map[byte][]incognitokey.CommitteePublicKey `json:"-"` // current committee and validator of all shard
+	ShardPendingValidator                  map[byte][]incognitokey.CommitteePublicKey `json:"-"` // pending candidate waiting for swap to get in committee of all shard
+	AutoStaking                            map[string]bool                            `json:"-"`
+	StakingTx                              map[string]common.Hash                     `json:"-"`
 	CurrentRandomNumber                    int64                                      `json:"CurrentRandomNumber"`
 	CurrentRandomTimeStamp                 int64                                      `json:"CurrentRandomTimeStamp"` // random timestamp for this epoch
 	IsGetRandomNumber                      bool                                       `json:"IsGetRandomNumber"`
@@ -56,7 +59,7 @@ type BeaconBestState struct {
 	ConsensusAlgorithm                     string                                     `json:"ConsensusAlgorithm"`
 	ShardConsensusAlgorithm                map[byte]string                            `json:"ShardConsensusAlgorithm"`
 	// key: public key of committee, value: payment address reward receiver
-	RewardReceiver map[string]string `json:"RewardReceiver"` // map incognito public key -> reward receiver (payment address)
+	RewardReceiver map[string]privacy.PaymentAddress `json:"-"` // map incognito public key -> reward receiver (payment address)
 	// cross shard state for all the shard. from shardID -> to crossShard shardID -> last height
 	// e.g 1 -> 2 -> 3 // shard 1 send cross shard to shard 2 at  height 3
 	// e.g 1 -> 3 -> 2 // shard 1 send cross shard to shard 3 at  height 2
@@ -66,8 +69,6 @@ type BeaconBestState struct {
 	NumOfBlocksByProducers map[string]uint64 `json:"NumOfBlocksByProducers"`
 	BlockInterval          time.Duration
 	BlockMaxCreateTime     time.Duration
-	//================================ local state
-	currentPDEState *CurrentPDEState
 	//================================ StateDB Method
 	// block height => root hash
 	consensusStateDB         *statedb.StateDB
@@ -114,10 +115,11 @@ func NewBeaconBestStateWithConfig(netparam *Params) *BeaconBestState {
 	beaconBestState.CandidateBeaconWaitingForCurrentRandom = []incognitokey.CommitteePublicKey{}
 	beaconBestState.CandidateShardWaitingForNextRandom = []incognitokey.CommitteePublicKey{}
 	beaconBestState.CandidateBeaconWaitingForNextRandom = []incognitokey.CommitteePublicKey{}
-	beaconBestState.RewardReceiver = make(map[string]string)
+	beaconBestState.RewardReceiver = make(map[string]privacy.PaymentAddress)
 	beaconBestState.ShardCommittee = make(map[byte][]incognitokey.CommitteePublicKey)
 	beaconBestState.ShardPendingValidator = make(map[byte][]incognitokey.CommitteePublicKey)
 	beaconBestState.AutoStaking = make(map[string]bool)
+	beaconBestState.StakingTx = make(map[string]common.Hash)
 	beaconBestState.Params = make(map[string]string)
 	beaconBestState.CurrentRandomNumber = -1
 	beaconBestState.MaxBeaconCommitteeSize = netparam.MaxBeaconCommitteeSize
@@ -128,7 +130,6 @@ func NewBeaconBestStateWithConfig(netparam *Params) *BeaconBestState {
 	beaconBestState.LastCrossShardState = make(map[byte]map[byte]uint64)
 	beaconBestState.BlockInterval = netparam.MinBeaconBlockInterval
 	beaconBestState.BlockMaxCreateTime = netparam.MaxBeaconBlockCreation
-	beaconBestState.currentPDEState = new(CurrentPDEState)
 	return beaconBestState
 }
 
@@ -577,7 +578,7 @@ func (beaconBestState *BeaconBestState) GetBeaconPendingValidator() []incognitok
 	return beaconBestState.BeaconPendingValidator
 }
 
-func (beaconBestState *BeaconBestState) GetRewardReceiver() map[string]string {
+func (beaconBestState *BeaconBestState) GetRewardReceiver() map[string]privacy.PaymentAddress {
 	return beaconBestState.RewardReceiver
 }
 
@@ -602,6 +603,68 @@ func (beaconBestState *BeaconBestState) cloneBeaconBestStateFrom(target *BeaconB
 	beaconBestState.featureStateDB = target.featureStateDB.Copy()
 	beaconBestState.rewardStateDB = target.rewardStateDB.Copy()
 	beaconBestState.slashStateDB = target.slashStateDB.Copy()
+
+	// TODO: @tin: re-produce field that not marshal
+	if beaconBestState.AutoStaking == nil {
+		beaconBestState.AutoStaking = make(map[string]bool)
+	}
+	if beaconBestState.StakingTx == nil {
+		beaconBestState.StakingTx = make(map[string]common.Hash)
+	}
+	beaconBestState.BestBlock = target.BestBlock
+	if beaconBestState.RewardReceiver == nil {
+		beaconBestState.RewardReceiver = make(map[string]privacy.PaymentAddress)
+	}
+
+	// Clone beacon comittee
+	beaconBestState.BeaconCommittee = make([]incognitokey.CommitteePublicKey, len(target.BeaconCommittee))
+	for i, v := range target.BeaconCommittee {
+		beaconBestState.BeaconCommittee[i] = v
+	}
+
+	// Clone shard committee
+	beaconBestState.ShardCommittee = make(map[byte][]incognitokey.CommitteePublicKey, len(target.ShardCommittee))
+	for i, v := range target.ShardCommittee {
+		beaconBestState.ShardCommittee[i] = make([]incognitokey.CommitteePublicKey, len(v))
+		for index, value := range v {
+			beaconBestState.ShardCommittee[i][index] = value
+		}
+	}
+
+	beaconBestState.BeaconPendingValidator = make([]incognitokey.CommitteePublicKey, len(target.BeaconPendingValidator))
+	for i, v := range target.BeaconPendingValidator {
+		beaconBestState.BeaconPendingValidator[i] = v
+	}
+
+	beaconBestState.CandidateShardWaitingForCurrentRandom = make([]incognitokey.CommitteePublicKey, len(target.CandidateShardWaitingForCurrentRandom))
+	for i, v := range target.CandidateShardWaitingForCurrentRandom {
+		beaconBestState.CandidateShardWaitingForCurrentRandom[i] = v
+	}
+
+	beaconBestState.CandidateBeaconWaitingForCurrentRandom = make([]incognitokey.CommitteePublicKey, len(target.CandidateBeaconWaitingForCurrentRandom))
+	for i, v := range target.CandidateBeaconWaitingForCurrentRandom {
+		beaconBestState.CandidateBeaconWaitingForCurrentRandom[i] = v
+	}
+
+	beaconBestState.CandidateShardWaitingForNextRandom = make([]incognitokey.CommitteePublicKey, len(target.CandidateShardWaitingForNextRandom))
+	for i, v := range target.CandidateShardWaitingForNextRandom {
+		beaconBestState.CandidateShardWaitingForNextRandom[i] = v
+	}
+
+	beaconBestState.CandidateBeaconWaitingForNextRandom = make([]incognitokey.CommitteePublicKey, len(target.CandidateBeaconWaitingForNextRandom))
+	for i, v := range target.CandidateBeaconWaitingForNextRandom {
+		beaconBestState.CandidateBeaconWaitingForNextRandom[i] = v
+	}
+
+	// Clone shard committee
+	beaconBestState.ShardPendingValidator = make(map[byte][]incognitokey.CommitteePublicKey, len(target.ShardPendingValidator))
+	for i, v := range target.ShardPendingValidator {
+		beaconBestState.ShardPendingValidator[i] = make([]incognitokey.CommitteePublicKey, len(v))
+		for index, value := range v {
+			beaconBestState.ShardPendingValidator[i][index] = value
+		}
+	}
+
 	//beaconBestState.currentPDEState = target.currentPDEState.Copy()
 	return nil
 }
