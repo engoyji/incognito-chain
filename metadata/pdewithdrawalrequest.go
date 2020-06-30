@@ -95,7 +95,7 @@ func (pc PDEWithdrawalRequest) ValidateSanityData(bcr BlockchainRetriever, txr T
 }
 
 func (pc PDEWithdrawalRequest) ValidateMetadataByItself() bool {
-	return pc.Type == PDEWithdrawalRequestMeta
+	return pc.Type == PDEWithdrawalRequestMeta || pc.Type == PDEWithdrawalWithPRVFeeRequestMeta
 }
 
 func (pc PDEWithdrawalRequest) Hash() *common.Hash {
@@ -120,7 +120,7 @@ func (pc *PDEWithdrawalRequest) BuildReqActions(tx Transaction, bcr BlockchainRe
 		return [][]string{}, err
 	}
 	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
-	action := []string{strconv.Itoa(PDEWithdrawalRequestMeta), actionContentBase64Str}
+	action := []string{strconv.Itoa(pc.Type), actionContentBase64Str}
 	return [][]string{action}, nil
 }
 

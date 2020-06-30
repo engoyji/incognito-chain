@@ -125,6 +125,8 @@ type Transaction interface {
 	IsCoinsBurning(BlockchainRetriever, uint64) bool
 	CalculateTxValue() uint64
 	IsSalaryTx() bool
+	GetFullTxValues() (uint64, uint64)
+	IsFullBurning(bcr BlockchainRetriever, beaconHeight uint64) bool
 }
 
 func getPDEPoolPair(

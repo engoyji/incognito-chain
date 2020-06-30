@@ -3,9 +3,10 @@ package statedb
 import (
 	"bytes"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"sort"
 	"strconv"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 	waitingPDEContributionPrefix       = []byte("waitingpdecontribution-")
 	pdePoolPrefix                      = []byte("pdepool-")
 	pdeSharePrefix                     = []byte("pdeshare-")
+	pdeTradingFeePrefix                = []byte("pdetradingfee-")
 	pdeTradeFeePrefix                  = []byte("pdetradefee-")
 	pdeContributionStatusPrefix        = []byte("pdecontributionstatus-")
 	pdeTradeStatusPrefix               = []byte("pdetradestatus-")
@@ -49,21 +51,21 @@ var (
 	portalLiquidationTpExchangeRatesStatusPrefix  = []byte("portalliquidationtpexchangeratesstatus-")
 	portalLiquidationExchangeRatesPoolPrefix      = []byte("portalliquidationexchangeratespool-")
 	portalLiquidationCustodianDepositStatusPrefix = []byte("portalliquidationcustodiandepositstatus-")
-	portalTopUpWaitingPortingStatusPrefix = []byte("portaltopupwaitingportingstatus-")
+	portalTopUpWaitingPortingStatusPrefix         = []byte("portaltopupwaitingportingstatus-")
 	portalLiquidationRedeemRequestStatusPrefix    = []byte("portalliquidationredeemrequeststatus-")
 	portalWaitingPortingRequestPrefix             = []byte("portalwaitingportingrequest-")
-	portalCustodianStatePrefix        = []byte("portalcustodian-")
-	portalWaitingRedeemRequestsPrefix = []byte("portalwaitingredeemrequest-")
-	portalMatchedRedeemRequestsPrefix = []byte("portalmatchedredeemrequest-")
+	portalCustodianStatePrefix                    = []byte("portalcustodian-")
+	portalWaitingRedeemRequestsPrefix             = []byte("portalwaitingredeemrequest-")
+	portalMatchedRedeemRequestsPrefix             = []byte("portalmatchedredeemrequest-")
 
-	portalStatusPrefix                        = []byte("portalstatus-")
-	portalCustodianDepositStatusPrefix        = []byte("custodiandeposit-")
-	portalRequestPTokenStatusPrefix           = []byte("requestptoken-")
-	portalRedeemRequestStatusPrefix           = []byte("redeemrequest-")
-	portalRedeemRequestStatusByTxReqIDPrefix  = []byte("redeemrequestbytxid-")
-	portalRequestUnlockCollateralStatusPrefix = []byte("requestunlockcollateral-")
-	portalRequestWithdrawRewardStatusPrefix   = []byte("requestwithdrawportalreward-")
-	portalReqMatchingRedeemStatusByTxReqIDPrefix  = []byte("reqmatchredeembytxid-")
+	portalStatusPrefix                           = []byte("portalstatus-")
+	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
+	portalRequestPTokenStatusPrefix              = []byte("requestptoken-")
+	portalRedeemRequestStatusPrefix              = []byte("redeemrequest-")
+	portalRedeemRequestStatusByTxReqIDPrefix     = []byte("redeemrequestbytxid-")
+	portalRequestUnlockCollateralStatusPrefix    = []byte("requestunlockcollateral-")
+	portalRequestWithdrawRewardStatusPrefix      = []byte("requestwithdrawportalreward-")
+	portalReqMatchingRedeemStatusByTxReqIDPrefix = []byte("reqmatchredeembytxid-")
 
 	// liquidation for portal
 	portalLiquidateCustodianRunAwayPrefix = []byte("portalliquidaterunaway-")
@@ -181,6 +183,11 @@ func GetPDESharePrefix() []byte {
 	return h[:][:prefixHashKeyLength]
 }
 
+func GetPDETradingFeePrefix() []byte {
+	h := common.HashH(pdeTradingFeePrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
 func GetPDEStatusPrefix() []byte {
 	h := common.HashH(pdeStatusPrefix)
 	return h[:][:prefixHashKeyLength]
@@ -252,6 +259,14 @@ func GetPDEShareKey(beaconHeight uint64, token1ID string, token2ID string, contr
 	tokenIDs := []string{token1ID, token2ID}
 	sort.Strings(tokenIDs)
 	return append(prefix, []byte(tokenIDs[0]+"-"+tokenIDs[1]+"-"+contributorAddress)...)
+}
+
+// GetPDETradingFeeKey: PDETradingFeePrefix + beacon height + token1ID + token2ID
+func GetPDETradingFeeKey(beaconHeight uint64, token1ID string, token2ID string) []byte {
+	prefix := append(pdeTradingFeePrefix, []byte(fmt.Sprintf("%d-", beaconHeight))...)
+	tokenIDs := []string{token1ID, token2ID}
+	sort.Strings(tokenIDs)
+	return append(prefix, []byte(tokenIDs[0]+"-"+tokenIDs[1])...)
 }
 
 func GetPDEStatusKey(prefix []byte, suffix []byte) []byte {

@@ -113,6 +113,9 @@ const (
 	PDETradeAcceptedStatus = 1
 	PDETradeRefundStatus   = 2
 
+	PDECrossPoolTradeAcceptedStatus = 1
+	PDECrossPoolTradeRefundStatus   = 2
+
 	PDEWithdrawalAcceptedStatus = 1
 	PDEWithdrawalRejectedStatus = 2
 
@@ -190,6 +193,14 @@ const (
 
 	PDEWithdrawalAcceptedChainStatus = "accepted"
 	PDEWithdrawalRejectedChainStatus = "rejected"
+
+	PDEWithdrawalOnFeeAcceptedChainStatus = "onFeeAccepted"
+	PDEWithdrawalOnPoolPairAcceptedChainStatus = "onPoolPairAccepted"
+	PDEWithdrawalWithPRVFeeRejectedChainStatus = "withPRVFeeRejected"
+
+	PDECrossPoolTradeFeeRefundChainStatus = "xPoolTradeRefundFee"
+	PDECrossPoolTradeSellingTokenRefundChainStatus = "xPoolTradeRefundSellingToken"
+	PDECrossPoolTradeAcceptedChainStatus = "xPoolTradeAccepted"
 )
 
 // Portal status for chain

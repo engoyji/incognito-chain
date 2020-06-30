@@ -34,12 +34,17 @@ const (
 	BurningConfirmMeta    = 72
 
 	// pde
-	PDEContributionMeta         = 90
-	PDETradeRequestMeta         = 91
-	PDETradeResponseMeta        = 92
-	PDEWithdrawalRequestMeta    = 93
-	PDEWithdrawalResponseMeta   = 94
-	PDEContributionResponseMeta = 95
+	PDEContributionMeta                   = 90
+	PDETradeRequestMeta                   = 91
+	PDETradeResponseMeta                  = 92
+	PDEWithdrawalRequestMeta              = 93
+	PDEWithdrawalResponseMeta             = 94
+	PDEContributionResponseMeta           = 95
+	PDEPRVRequiredContributionRequestMeta = 204
+	PDECrossPoolTradeRequestMeta          = 205
+	PDECrossPoolTradeResponseMeta         = 206
+	PDEWithdrawalWithPRVFeeRequestMeta    = 207
+	PDEWithdrawalWithPRVFeeResponseMeta   = 208
 
 	// portal
 	PortalCustodianDepositMeta                      = 100
@@ -81,7 +86,6 @@ const (
 	PortalTopUpWaitingPortingRequestMeta  = 202
 	PortalTopUpWaitingPortingResponseMeta = 203
 
-
 	// incognito mode for smart contract
 	BurningForDepositToSCRequestMeta = 96
 	BurningConfirmForDepositToSCMeta = 97
@@ -95,7 +99,9 @@ var minerCreatedMetaTypes = []int{
 	ReturnStakingMeta,
 	WithDrawRewardResponseMeta,
 	PDETradeResponseMeta,
+	PDECrossPoolTradeResponseMeta,
 	PDEWithdrawalResponseMeta,
+	PDEWithdrawalWithPRVFeeResponseMeta,
 	PDEContributionResponseMeta,
 	PortalUserRequestPTokenResponseMeta,
 	PortalCustodianDepositResponseMeta,
