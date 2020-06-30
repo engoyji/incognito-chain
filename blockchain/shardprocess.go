@@ -146,16 +146,19 @@ func (blockchain *BlockChain) InsertShardBlock(shardBlock *ShardBlock, shouldVal
 	} else {
 		Logger.log.Infof("SHARD %+v | SKIP Verify Pre Processing, block height %+v with hash %+v \n", shardID, blockHeight, blockHash)
 	}
-	// Verify block with previous best state
-	Logger.log.Debugf("SHARD %+v | Verify BestState With Shard Block, block height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
-	if err := curView.verifyBestStateWithShardBlock(blockchain, shardBlock, true, shardID); err != nil {
-		return err
-	}
 
-	if err := blockchain.config.ConsensusEngine.ValidateBlockCommitteSig(shardBlock, curView.ShardCommittee); err != nil {
-		return err
+	if shouldValidate {
+		// Verify block with previous best state
+		Logger.log.Debugf("SHARD %+v | Verify BestState With Shard Block, block height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
+		if err := curView.verifyBestStateWithShardBlock(blockchain, shardBlock, true, shardID); err != nil {
+			return err
+		}
+		if err := blockchain.config.ConsensusEngine.ValidateBlockCommitteSig(shardBlock, curView.ShardCommittee); err != nil {
+			return err
+		}
+	} else {
+		Logger.log.Debugf("SHARD %+v | SKIP Verify Best State With Shard Block, Shard Block Height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
 	}
-	Logger.log.Debugf("SHARD %+v | BackupCurrentShardState, block height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
 
 	Logger.log.Debugf("SHARD %+v | Update ShardBestState, block height %+v with hash %+v \n", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
 	newBestState, err := curView.updateShardBestState(blockchain, shardBlock, beaconBlocks, committeeChange)
@@ -168,15 +171,15 @@ func (blockchain *BlockChain) InsertShardBlock(shardBlock *ShardBlock, shouldVal
 	newBestState.updateNumOfBlocksByProducers(shardBlock)
 
 	//========Post verification: verify new beaconstate with corresponding block
-	//if shouldValidate {
-	Logger.log.Debugf("SHARD %+v | Verify Post Processing, block height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
-	if err := newBestState.verifyPostProcessingShardBlock(shardBlock, shardID); err != nil {
-		fmt.Println("Instructions", shardBlock.Body.Instructions)
-		return err
+	if shouldValidate {
+		Logger.log.Debugf("SHARD %+v | Verify Post Processing, block height %+v with hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
+		if err := newBestState.verifyPostProcessingShardBlock(shardBlock, shardID); err != nil {
+			fmt.Println("Instructions", shardBlock.Body.Instructions)
+			return err
+		}
+	} else {
+		Logger.log.Infof("SHARD %+v | SKIP Verify Post Processing, block height %+v with hash %+v \n", shardID, blockHeight, blockHash)
 	}
-	//} else {
-	//	Logger.log.Infof("SHARD %+v | SKIP Verify Post Processing, block height %+v with hash %+v \n", shardID, blockHeight, blockHash)
-	//}
 
 	Logger.log.Infof("SHARD %+v | Update Beacon Instruction, block height %+v with hash %+v \n", shardID, blockHeight, blockHash)
 	err = blockchain.processSalaryInstructions(newBestState.rewardStateDB, beaconBlocks, shardID)
@@ -1172,43 +1175,6 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 	}
 	shardStoreBlockTimer.UpdateSince(startTimeProcessStoreShardBlock)
 	Logger.log.Infof("SHARD %+v | 🔎 %d transactions in block height %+v \n", shardBlock.Header.ShardID, len(shardBlock.Body.Transactions), blockHeight)
-
-	// get map shard committee
-
-	mapByte, err := json.Marshal(newShardState.ShardCommittee)
-	if err != nil {
-		panic(err)
-	}
-
-	committeePublicKey := statedb.GetOneShardCommittee(newShardState.consensusStateDB, shardID)
-	databaseByte, err := json.Marshal(committeePublicKey)
-	if err != nil {
-		panic(err)
-	}
-
-	if !bytes.Equal(mapByte, databaseByte) {
-
-		fmt.Println("[optimize-beststate-debug] newShardState.ShardHeight:", newShardState.ShardHeight)
-
-		fmt.Println("[optimize-beststate-debug] len(newShardState.ShardCommittee):", len(newShardState.ShardCommittee))
-
-		for _, v := range newShardState.ShardCommittee {
-			key, _ := v.ToBase58()
-			fmt.Println("[optimize-beststate] key in newShardState.ShardCommittee:", key)
-		}
-
-		fmt.Println("[optimize-beststate-debug] len(committeePublicKey):", len(committeePublicKey))
-
-		for _, v := range committeePublicKey {
-			key, _ := v.ToBase58()
-			fmt.Println("[optimize-beststate] key in committeePublicKey:", key)
-		}
-
-		panic("mapByte and databaseByte of shard best state is not similar")
-	}
-
-	// get shard committee database
-
 	return nil
 }
 
