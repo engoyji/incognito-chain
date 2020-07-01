@@ -44,6 +44,7 @@ const (
 	getBlocks                   = "getblocks"
 	retrieveBlock               = "retrieveblock"
 	retrieveBlockByHeight       = "retrieveblockbyheight"
+	retrieveRawBlockByHeight    = "retrieverawblockbyheight"
 	retrieveBeaconBlock         = "retrievebeaconblock"
 	retrieveBeaconBlockByHeight = "retrievebeaconblockbyheight"
 	getBlockChainInfo           = "getblockchaininfo"

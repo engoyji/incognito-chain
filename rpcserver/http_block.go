@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"errors"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
@@ -103,6 +104,27 @@ func (httpServer *HttpServer) handleRetrieveBlockByHeight(params interface{}, cl
 		}
 
 		result, err := httpServer.blockService.RetrieveShardBlockByHeight(uint64(blockHeight), int(shardID), verbosity)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 2 elements"))
+}
+
+func (httpServer *HttpServer) handleRetrieveRawBlockByHeight(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	paramArray, ok := params.([]interface{})
+	if ok && len(paramArray) >= 2 {
+		blockHeight, ok := paramArray[0].(float64)
+		if !ok {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("hashString is invalid"))
+		}
+		shardID, ok := paramArray[1].(float64)
+		if !ok || shardID < 0 {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("shardID is invalid"))
+		}
+
+		result, err := httpServer.blockService.RetrieveRawShardBlockByHeight(uint64(blockHeight), int(shardID))
 		if err != nil {
 			return nil, err
 		}

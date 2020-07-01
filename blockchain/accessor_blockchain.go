@@ -218,6 +218,18 @@ func (blockchain *BlockChain) GetShardBlockByHeight(height uint64, shardID byte)
 	return shardBlockMap, err
 }
 
+func (blockchain *BlockChain) GetRawShardBlockByHeight(height uint64, shardID byte) (map[common.Hash]string, error) {
+	shardBlockMap := make(map[common.Hash]string)
+	m, err := rawdbv2.GetShardBlockByIndex(blockchain.GetShardChainDatabase(shardID), shardID, height)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range m {
+		shardBlockMap[k] = string(v)
+	}
+	return shardBlockMap, err
+}
+
 func (blockchain *BlockChain) GetShardBlockByHeightV1(height uint64, shardID byte) (*ShardBlock, error) {
 	res, err := blockchain.GetShardBlockByHeight(height, shardID)
 	if err != nil {

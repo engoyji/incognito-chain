@@ -50,6 +50,10 @@ type GetShardBlockResult struct {
 	CrossShardBitMap  []int              `json:"CrossShardBitMap"`
 }
 
+type GetRawShardBlockResult struct {
+	RawJson string `json:"RawJson"`
+}
+
 type GetBlockTxResult struct {
 	Hash     string `json:"Hash"`
 	Locktime int64  `json:"Locktime"`

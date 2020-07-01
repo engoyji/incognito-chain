@@ -354,6 +354,21 @@ func (blockService BlockService) RetrieveShardBlockByHeight(blockHeight uint64, 
 	return result, nil
 }
 
+func (blockService BlockService) RetrieveRawShardBlockByHeight(blockHeight uint64, shardId int) ([]*jsonresult.GetRawShardBlockResult, *RPCError) {
+	shardBlocks, errD := blockService.BlockChain.GetRawShardBlockByHeight(blockHeight, byte(shardId))
+	if errD != nil {
+		Logger.log.Debugf("handleRetrieveBlock result: %+v, err: %+v", nil, errD)
+		return nil, NewRPCError(GetShardBlockByHashError, errD)
+	}
+	result := []*jsonresult.GetRawShardBlockResult{}
+	for _, shardBlock := range shardBlocks {
+		res := jsonresult.GetRawShardBlockResult{}
+		res.RawJson = shardBlock
+		result = append(result, &res)
+	}
+	return result, nil
+}
+
 func (blockService BlockService) RetrieveBeaconBlock(hashString string) (*jsonresult.GetBeaconBlockResult, *RPCError) {
 	hash, errH := common.Hash{}.NewHashFromStr(hashString)
 	if errH != nil {
