@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/utility/httprequest"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/incognitochain/incognito-chain/utility/httprequest"
 )
 
 //JsonRequest ...
@@ -32,12 +33,12 @@ type RPCError struct {
 }
 
 type JsonResponse struct {
-	Id      *interface{}         `json:"Id"`
-	Result  json.RawMessage      `json:"Result"`
-	Error   *RPCError 			 `json:"Error"`
-	Params  interface{}          `json:"Params"`
-	Method  string               `json:"Method"`
-	Jsonrpc string               `json:"Jsonrpc"`
+	Id      *interface{}    `json:"Id"`
+	Result  json.RawMessage `json:"Result"`
+	Error   *RPCError       `json:"Error"`
+	Params  interface{}     `json:"Params"`
+	Method  string          `json:"Method"`
+	Jsonrpc string          `json:"Jsonrpc"`
 }
 
 //preloadDatabase call to backuped database node ...
@@ -58,7 +59,7 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 	if err != nil {
 		return err
 	}
-
+	fmt.Println("[backup-database] {preloadDatabase} sent")
 	resp, err := httprequest.Send(url, "POST", header, bodyReq)
 	if err != nil {
 		fmt.Println("[backup-database] {preloadDatabase} send request err:", err)
@@ -89,7 +90,7 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 			return err
 		}
 
-		if jsonRes.Error.Code != -1001{
+		if jsonRes.Error.Code != -1001 {
 			fmt.Println("pkg blockchain {preloadDatabase} jsonRes.Error.Code:", jsonRes.Error.Code)
 			return err
 		}
@@ -129,11 +130,14 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 		return err
 	}
 
-	err = Uncompress(path + "/" + resp.Header.Get("File-Name"), dataDir)
+	err = Uncompress(path+"/"+resp.Header.Get("File-Name"), dataDir)
 	if err != nil {
 		return err
 	}
-
+	if chainID == 0 {
+		fmt.Println(path+"/"+resp.Header.Get("File-Name"), dataDir)
+		// panic(0)
+	}
 	return nil
 }
 

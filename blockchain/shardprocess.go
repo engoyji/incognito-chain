@@ -1165,7 +1165,7 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 
 	//Backup
 
-	if !blockchain.config.ChainParams.IsBackup{
+	if !blockchain.config.ChainParams.IsBackup {
 		return nil
 	}
 
@@ -1176,12 +1176,11 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 	}
 
 	if (newShardState.ShardHeight+1)%blockchain.config.ChainParams.Epoch == 0 {
-
 		err := blockchain.GetShardChainDatabase(newShardState.ShardID).Close()
 		if err != nil {
 			return err
 		}
-		blockchain.GetShardChainDatabase(newShardState.ShardID).Backup(fmt.Sprintf("../../../backup/shard%d/%d", newShardState.ShardID,newShardState.Epoch))
+		blockchain.GetShardChainDatabase(newShardState.ShardID).Backup(fmt.Sprintf("../../../backup/shard%d/%d", newShardState.ShardID, newShardState.Epoch))
 		err = blockchain.GetShardChainDatabase(newShardState.ShardID).ReOpen()
 		if err != nil {
 			return err

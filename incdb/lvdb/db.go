@@ -258,7 +258,6 @@ func (db *db) Backup(backupFile string) {
 	if err := compress(db.dbPath, &buf); err != nil {
 		panic(err)
 	}
-
 	// write the .tar.gzip
 	if err := os.MkdirAll(filepath.Dir(backupFile), 0700); err != nil {
 		panic(err)
@@ -290,8 +289,8 @@ func removeUnusedBackupDatabase(filePath string) error {
 
 	//Get path directory of this file
 	path := filePath
-	for i := len(path) - 1; i>-1; i-- {
-		if path[i] != '/'{
+	for i := len(path) - 1; i > -1; i-- {
+		if path[i] != '/' {
 			path = path[:len(path)-1]
 		} else {
 			log.Println(1)
@@ -310,14 +309,14 @@ func removeUnusedBackupDatabase(filePath string) error {
 	}
 
 	//Get file name and compare with latest epoch
-	for _, file := range files{
+	for _, file := range files {
 
 		epoch, err := strconv.Atoi(file.Name())
 		if err != nil {
 			return err
 		}
 
-		if epoch != latestEpoch && epoch != latestEpoch - 1{
+		if epoch != latestEpoch && epoch != latestEpoch-1 {
 			name := path + "/" + file.Name()
 			err = os.Remove(name)
 			if err != nil {

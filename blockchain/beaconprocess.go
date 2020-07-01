@@ -1520,12 +1520,12 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 
 	//backup
 
-	if !blockchain.config.ChainParams.IsBackup{
+	if !blockchain.config.ChainParams.IsBackup {
 		return nil
 	}
 
 	if !blockchain.config.ChainParams.IsBackupFromGenesis {
-		if !blockchain.BeaconChain.IsReadyBackupDB(){
+		if !blockchain.BeaconChain.IsReadyBackupDB() {
 			return nil
 		}
 	}

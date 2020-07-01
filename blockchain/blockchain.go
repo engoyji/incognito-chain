@@ -109,11 +109,18 @@ func (blockchain *BlockChain) initChainState() error {
 	//FOR TESTING ONLY
 	// Preload data from a trusted full node
 	if blockchain.config.ChainParams.IsPreload {
-		//blockchain.config.ChainParams.
-		err := preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
+		err := blockchain.GetBeaconChainDatabase().Close()
+		if err != nil {
+			return err
+		}
+		err = preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
 		if err != nil {
 			Logger.log.Error(err)
 			//panic(err)
+		}
+		err = blockchain.GetBeaconChainDatabase().ReOpen()
+		if err != nil {
+			return err
 		}
 	}
 	///
@@ -134,10 +141,18 @@ func (blockchain *BlockChain) initChainState() error {
 		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
 
 		if blockchain.config.ChainParams.IsPreload {
+			err := blockchain.GetShardChainDatabase(shardID).Close()
+			if err != nil {
+				return err
+			}
 			err := preloadDatabase(int(shardID), blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
 			if err != nil {
 				Logger.log.Error(err)
 				//panic(err)
+			}
+			err = blockchain.GetShardChainDatabase(shardID).ReOpen()
+			if err != nil {
+				return err
 			}
 		}
 
