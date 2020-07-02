@@ -141,16 +141,7 @@ func (blockchain *BlockChain) initChainState() error {
 		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
 
 		if blockchain.config.ChainParams.IsPreload {
-			err := blockchain.GetShardChainDatabase(shardID).Close()
-			if err != nil {
-				return err
-			}
-			err := preloadDatabase(int(shardID), blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
-			if err != nil {
-				Logger.log.Error(err)
-				//panic(err)
-			}
-			err = blockchain.GetShardChainDatabase(shardID).ReOpen()
+			err := blockchain.PreloadShardChainData(shardID)
 			if err != nil {
 				return err
 			}
