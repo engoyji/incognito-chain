@@ -138,14 +138,14 @@ func (blockchain *BlockChain) initChainState() error {
 	blockchain.ShardChain = make([]*ShardChain, blockchain.GetBeaconBestState().ActiveShards)
 	for shard := 1; shard <= blockchain.GetBeaconBestState().ActiveShards; shard++ {
 		shardID := byte(shard - 1)
-		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
+		// blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
 
-		if blockchain.config.ChainParams.IsPreload {
-			err := blockchain.PreloadShardChainData(shardID)
-			if err != nil {
-				return err
-			}
-		}
+		// if blockchain.config.ChainParams.IsPreload {
+		// 	err := blockchain.PreloadShardChainData(shardID)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// }
 
 		if err := blockchain.RestoreShardViews(shardID); err != nil {
 			Logger.log.Error("debug restore shard fail, init")
@@ -503,6 +503,7 @@ Restart all BeaconView from Database
 */
 func (blockchain *BlockChain) RestoreShardViews(shardID byte) error {
 	allViews := []*ShardBestState{}
+	blockchain.ShardChain[shardID] = NewShardChain(int(shardID), multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
 	b, err := rawdbv2.GetShardBestState(blockchain.GetShardChainDatabase(shardID), shardID)
 	if err != nil {
 		fmt.Println("debug Cannot see shard best state")

@@ -5,6 +5,10 @@ func (blockchain *BlockChain) PreloadShardChainData(shardID byte) error {
 	if err != nil {
 		return err
 	}
+	err = blockchain.GetShardChainDatabase(shardID).Clear()
+	if err != nil {
+		return err
+	}
 	err = preloadDatabase(int(shardID), blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
 	if err != nil {
 		Logger.log.Error(err)
@@ -12,6 +16,9 @@ func (blockchain *BlockChain) PreloadShardChainData(shardID byte) error {
 	}
 	err = blockchain.GetShardChainDatabase(shardID).ReOpen()
 	if err != nil {
+		return err
+	}
+	if err := blockchain.RestoreShardViews(shardID); err != nil {
 		return err
 	}
 	return nil

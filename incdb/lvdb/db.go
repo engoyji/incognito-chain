@@ -276,6 +276,20 @@ func (db *db) Backup(backupFile string) {
 	}
 }
 
+func (db *db) Clear() error {
+	files, err := filepath.Glob(filepath.Join(db.dbPath, "*"))
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err = os.RemoveAll(file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 //removeUnusedBackupDatabase ...
 // for remove unused databases in backup folder
 func removeUnusedBackupDatabase(filePath string) error {

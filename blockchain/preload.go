@@ -59,7 +59,7 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 	if err != nil {
 		return err
 	}
-	fmt.Println("[backup-database] {preloadDatabase} sent")
+	fmt.Println("[backup-database] {preloadDatabase} sent", chainID)
 	resp, err := httprequest.Send(url, "POST", header, bodyReq)
 	if err != nil {
 		fmt.Println("[backup-database] {preloadDatabase} send request err:", err)
