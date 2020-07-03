@@ -901,23 +901,8 @@ func (beaconBestState *BeaconBestState) processInstruction(instruction []string,
 	if instruction[0] == StopAutoStake {
 		committeePublicKeys := strings.Split(instruction[1], ",")
 		for _, committeePublicKey := range committeePublicKeys {
-			// allCommitteeValidatorCandidate := beaconBestState.getAllCommitteeValidatorCandidateFlattenList()
-			// check existence in all committee list
-			// if common.IndexOfStr(committeePublicKey, allCommitteeValidatorCandidate) == -1 {
-			// 	// if not found then delete auto staking data for this public key if present
-			// 	if _, ok := beaconBestState.AutoStaking[committeePublicKey]; ok {
-			// 		delete(beaconBestState.AutoStaking, committeePublicKey)
-			// 	}
-			// } else {
-			// 	// if found in committee list then turn off auto staking
-			// 	if _, ok := beaconBestState.AutoStaking[committeePublicKey]; ok {
 			beaconBestState.AutoStaking[committeePublicKey] = false
-
-			// stakerInfo, has, err := statedb.GetStakerInfo(beaconBestState.consensusStateDB, committeePublicKey)
-
 			committeeChange.stopAutoStaking = append(committeeChange.stopAutoStaking, committeePublicKey)
-			// 	}
-			// }
 		}
 	}
 	if instruction[0] == SwapAction {
