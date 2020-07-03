@@ -168,6 +168,8 @@ func (blockchain *BlockChain) initChainState() error {
 */
 func (blockchain *BlockChain) initShardState(shardID byte) error {
 	// fmt.Println("[optimize-beststate] Blockchain.initShardState()")
+	blockchain.ShardChain[shardID] = NewShardChain(int(shardID), multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
+
 	initShardState := NewBestStateShardWithConfig(shardID, blockchain.config.ChainParams)
 	// Create a new block from genesis block and set it as best block of chain
 	initShardBlock := ShardBlock{}
@@ -493,8 +495,8 @@ func (blockchain *BlockChain) BackupShardViews(db incdb.KeyValueWriter, shardID 
 	allViews := []*ShardBestState{}
 	for _, v := range blockchain.ShardChain[shardID].multiView.GetAllViewsWithBFS() {
 		allViews = append(allViews, v.(*ShardBestState))
+		fmt.Println("debug BackupShardViews Committee", v.GetCommittee())
 	}
-	fmt.Println("debug BackupShardViews", len(allViews))
 	return rawdbv2.StoreShardBestState(db, shardID, allViews)
 }
 
@@ -516,19 +518,16 @@ func (blockchain *BlockChain) RestoreShardViews(shardID byte) error {
 	}
 	fmt.Println("debug RestoreShardViews", len(allViews))
 	for _, v := range allViews {
-
-		if !blockchain.ShardChain[shardID].multiView.AddView(v) {
-			panic("Restart shard views fail")
-		}
-
 		err := v.InitStateRootHash(blockchain.GetShardChainDatabase(shardID), blockchain)
 		if err != nil {
 			panic(err)
 		}
-
 		err = v.restoreCommittee(shardID)
 		if err != nil {
 			panic(err)
+		}
+		if !blockchain.ShardChain[shardID].multiView.AddView(v) {
+			panic("Restart shard views fail")
 		}
 	}
 

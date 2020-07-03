@@ -100,7 +100,6 @@ func (shardBestState *ShardBestState) restoreCommittee(shardID byte) error {
 	shardBestState.ShardCommittee = []incognitokey.CommitteePublicKey{}
 
 	committeePublicKey := statedb.GetOneShardCommittee(shardBestState.consensusStateDB, shardID)
-
 	for _, v := range committeePublicKey {
 		shardBestState.ShardCommittee = append(shardBestState.ShardCommittee, v)
 	}
