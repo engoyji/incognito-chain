@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy"
 )
@@ -434,4 +435,72 @@ func snapshotRewardReceiver(rewardReceiver map[string]privacy.PaymentAddress) (m
 		return snapshotRewardReceiver, fmt.Errorf("Failed to Clone Reward Rewards, expect %+v but get %+v", rewardReceiver, snapshotRewardReceiver)
 	}
 	return snapshotRewardReceiver, nil
+}
+
+func getMapSwapout(
+	currentView *BeaconBestState,
+	blockchain *BlockChain,
+) (
+	map[string]uint64,
+	error,
+) {
+	res := make(map[string]uint64)
+	listStakerOut, err := getListSwapout(currentView, blockchain)
+	if err != nil {
+		return res, err
+	}
+	for _, staker := range listStakerOut {
+		res[staker] = currentView.BeaconHeight + 1
+	}
+	return res, nil
+}
+
+func getListSwapout(
+	currentView *BeaconBestState,
+	blockchain *BlockChain,
+) (
+	listStakerOut []string,
+	err error,
+) {
+	listStakerOut = []string{}
+	if currentView.GetHeight()%blockchain.config.ChainParams.Epoch == 0 {
+		consensusRootHashPrev, err := blockchain.GetBeaconConsensusRootHash(currentView, currentView.BeaconHeight-1)
+		if err != nil {
+			return listStakerOut, NewBlockChainError(BeaconError, fmt.Errorf("Beacon Consensus Root Hash of Height %+v not found ,error %+v", currentView.BeaconHeight, err))
+		}
+		consensusStateDBPrev, err := statedb.NewWithPrefixTrie(consensusRootHashPrev, statedb.NewDatabaseAccessWarper(blockchain.GetBeaconChainDatabase()))
+		if err != nil {
+			return listStakerOut, NewBlockChainError(BeaconError, err)
+		}
+		consensusRootHash, err := blockchain.GetBeaconConsensusRootHash(currentView, currentView.BeaconHeight)
+		if err != nil {
+			return listStakerOut, NewBlockChainError(BeaconError, fmt.Errorf("Beacon Consensus Root Hash of Height %+v not found ,error %+v", currentView.BeaconHeight, err))
+		}
+		consensusStateDB, err := statedb.NewWithPrefixTrie(consensusRootHash, statedb.NewDatabaseAccessWarper(blockchain.GetBeaconChainDatabase()))
+		if err != nil {
+			return listStakerOut, NewBlockChainError(BeaconError, err)
+		}
+		prevFlattenList := statedb.GetAllCommitteeValidatorCandidateFlattenList(consensusStateDBPrev, blockchain.GetShardIDs())
+		currentFlattenList := statedb.GetAllCommitteeValidatorCandidateFlattenList(consensusStateDB, blockchain.GetShardIDs())
+		listStakerOut = difference(prevFlattenList, currentFlattenList)
+		return listStakerOut, nil
+	}
+	return listStakerOut, nil
+}
+
+func difference(a, b []incognitokey.CommitteePublicKey) []string {
+	mb := make(map[string]struct{}, len(b))
+	for _, pKey := range b {
+		pKeyString, _ := pKey.ToBase58()
+		mb[pKeyString] = struct{}{}
+	}
+	var diff []string
+	for _, pKey := range a {
+		pKeyString, _ := pKey.ToBase58()
+		mb[pKeyString] = struct{}{}
+		if _, found := mb[pKeyString]; !found {
+			diff = append(diff, pKeyString)
+		}
+	}
+	return diff
 }

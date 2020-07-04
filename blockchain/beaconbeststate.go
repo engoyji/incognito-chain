@@ -53,6 +53,7 @@ type BeaconBestState struct {
 	ShardPendingValidator                  map[byte][]incognitokey.CommitteePublicKey `json:"-"` // pending candidate waiting for swap to get in committee of all shard
 	AutoStaking                            map[string]bool                            `json:"-"`
 	StakingTx                              map[string]common.Hash                     `json:"-"`
+	StakerOut                              map[string]uint64                          `json:"-"`
 	CurrentRandomNumber                    int64                                      `json:"CurrentRandomNumber"`
 	CurrentRandomTimeStamp                 int64                                      `json:"CurrentRandomTimeStamp"` // random timestamp for this epoch
 	IsGetRandomNumber                      bool                                       `json:"IsGetRandomNumber"`
@@ -126,6 +127,7 @@ func NewBeaconBestStateWithConfig(netparam *Params) *BeaconBestState {
 	beaconBestState.ShardPendingValidator = make(map[byte][]incognitokey.CommitteePublicKey)
 	beaconBestState.AutoStaking = make(map[string]bool)
 	beaconBestState.StakingTx = make(map[string]common.Hash)
+	beaconBestState.StakerOut = make(map[string]uint64)
 	beaconBestState.Params = make(map[string]string)
 	beaconBestState.CurrentRandomNumber = -1
 	beaconBestState.MaxBeaconCommitteeSize = netparam.MaxBeaconCommitteeSize
@@ -578,6 +580,12 @@ func (beaconBestState *BeaconBestState) cloneBeaconBestStateFrom(target *BeaconB
 	}
 	for k, v := range target.AutoStaking {
 		beaconBestState.AutoStaking[k] = v
+	}
+	if beaconBestState.StakerOut == nil {
+		beaconBestState.StakerOut = make(map[string]uint64)
+	}
+	for k, v := range target.StakerOut {
+		beaconBestState.StakerOut[k] = v
 	}
 	if beaconBestState.StakingTx == nil {
 		beaconBestState.StakingTx = make(map[string]common.Hash)

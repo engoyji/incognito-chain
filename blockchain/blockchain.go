@@ -467,6 +467,10 @@ func (blockchain *BlockChain) RestoreBeaconViews() error {
 			return NewBlockChainError(BeaconError, err)
 		}
 		v.AutoStaking = statedb.GetMapAutoStaking(beaconConsensusStateDB, sID)
+		v.StakerOut, err = getMapSwapout(v, blockchain)
+		if err != nil {
+			return NewBlockChainError(BeaconError, err)
+		}
 		// finish reproduce
 		if !blockchain.BeaconChain.multiView.AddView(v) {
 			panic("Restart beacon views fail")

@@ -10,6 +10,7 @@ import (
 	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/pkg/errors"
 )
 
 func storeCommittee(stateDB *StateDB, shardID int, role int, committees []incognitokey.CommitteePublicKey) error {
@@ -287,6 +288,14 @@ func GetMapAutoStaking(bcDB *StateDB, shardIDs []int) map[string]bool {
 	return res
 }
 
+func GetAllCommitteeValidatorCandidateFlattenList(bcDB *StateDB, shardIDs []int) []incognitokey.CommitteePublicKey {
+	res, err := bcDB.getAllCommitteeValidatorCandidateFlattenList(shardIDs)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
+
 func GetStakerInfo(stateDB *StateDB, stakerPubkey string) (*StakerInfo, bool, error) {
 	pubKey := incognitokey.NewCommitteePublicKey()
 	err := pubKey.FromString(stakerPubkey)
@@ -440,12 +449,33 @@ func storeStakerInfo(
 		if err != nil {
 			return err
 		}
-		// delete(autoStaking, committeeString)
 		if _, ok := stakingTx[committeeString]; ok {
 			delete(stakingTx, committeeString)
 		}
 		if _, ok := rewardReceiver[committee.GetIncKeyBase58()]; ok {
 			delete(stakingTx, committee.GetIncKeyBase58())
+		}
+	}
+	return nil
+}
+
+func deleteStakers(stateDB *StateDB, stakers []incognitokey.CommitteePublicKey) error {
+	for _, staker := range stakers {
+		keyBytes, err := staker.RawBytes()
+		if err != nil {
+			return err
+		}
+		key := GetStakerInfoKey(keyBytes)
+		if err != nil {
+			return err
+		}
+		ok := stateDB.MarkDeleteStateObject(CommitteeObjectType, key)
+		if !ok {
+			keyStr, err := staker.ToBase58()
+			if err != nil {
+				panic(err)
+			}
+			return errors.Errorf("Can not found this staker info for delete %v", keyStr)
 		}
 	}
 	return nil
@@ -459,4 +489,30 @@ func StoreStakerInfo(
 	stakingTx map[string]common.Hash,
 ) error {
 	return storeStakerInfo(stateDB, committees, rewardReceiver, autoStaking, stakingTx)
+}
+
+func DeleteStakers(
+	stateDB *StateDB,
+	currentHeight uint64,
+	stakersOut map[string]uint64,
+) error {
+	listStakerOut := []incognitokey.CommitteePublicKey{}
+	for staker, height := range stakersOut {
+		if height == currentHeight {
+			stakerStruct := &incognitokey.CommitteePublicKey{}
+			err := stakerStruct.FromString(staker)
+			if err != nil {
+				return err
+			}
+			listStakerOut = append(listStakerOut, *stakerStruct)
+		}
+	}
+	if len(listStakerOut) != 0 {
+		err := deleteStakers(stateDB, listStakerOut)
+		if err != nil {
+			return err
+		}
+		stakersOut = map[string]uint64{}
+	}
+	return nil
 }

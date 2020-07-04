@@ -997,6 +997,7 @@ func (beaconBestState *BeaconBestState) processInstruction(instruction []string,
 							newShardCandidates = append(newShardCandidates, shardCandidate...)
 						} else {
 							delete(beaconBestState.AutoStaking, outPublicKey)
+							beaconBestState.StakerOut[outPublicKey] = beaconBestState.BeaconHeight + 1
 						}
 					}
 				}
@@ -1036,6 +1037,7 @@ func (beaconBestState *BeaconBestState) processInstruction(instruction []string,
 						newBeaconCandidates = append(newBeaconCandidates, beaconCandidate...)
 					} else {
 						delete(beaconBestState.AutoStaking, outPublicKey)
+						beaconBestState.StakerOut[outPublicKey] = beaconBestState.BeaconHeight + 1
 					}
 				}
 			}
@@ -1402,6 +1404,10 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 		return err
 	}
 	err = statedb.DeleteBeaconCommittee(newBestState.consensusStateDB, committeeChange.beaconCommitteeRemoved)
+	if err != nil {
+		return err
+	}
+	err = statedb.DeleteStakers(newBestState.consensusStateDB, beaconBlock.GetHeight(), newBestState.StakerOut)
 	if err != nil {
 		return err
 	}
