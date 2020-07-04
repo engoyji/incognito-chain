@@ -1354,6 +1354,10 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 	blockHeight := beaconBlock.Header.Height
 
 	var err error
+	err = statedb.DeleteStakers(newBestState.consensusStateDB, beaconBlock.GetHeight(), newBestState.StakerOut)
+	if err != nil {
+		return err
+	}
 	//statedb===========================START
 	// Added
 	err = statedb.StoreCurrentEpochShardCandidate(newBestState.consensusStateDB, committeeChange.currentEpochShardCandidateAdded)
@@ -1418,10 +1422,6 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 		return err
 	}
 	err = statedb.DeleteBeaconCommittee(newBestState.consensusStateDB, committeeChange.beaconCommitteeRemoved)
-	if err != nil {
-		return err
-	}
-	err = statedb.DeleteStakers(newBestState.consensusStateDB, beaconBlock.GetHeight(), newBestState.StakerOut)
 	if err != nil {
 		return err
 	}

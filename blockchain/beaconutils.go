@@ -455,6 +455,7 @@ func getMapSwapout(
 	return res, nil
 }
 
+// Restore from check different from list flatten at block h-1 and block h, beacause if some appear in block h-1 but not block h, it mean their are kicked out.
 func getListSwapout(
 	currentView *BeaconBestState,
 	blockchain *BlockChain,
