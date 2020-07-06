@@ -157,8 +157,8 @@ type config struct {
 	Preload           string `long:"preload" description:"Active preload database"`
 	BackupFromGenesis string `long:"backupfromgenesis" description:"Active backup database from genesis block"`
 	PreloadFromAddr   string `long:"preloadFromAddr" description:"Preload from address"`
-	PreloadDir   	  string `long:"preloaddir" description:"Preload to directory"`
-	BackupDir 		  string `long:"backupdir" description:"Backup to directory"`
+	// PreloadDir   	  string `long:"preloaddir" description:"Preload to directory"`
+	// BackupDir 		  string `long:"backupdir" description:"Backup to directory"`
 }
 
 //IsBackupFromGenesis
@@ -668,13 +668,13 @@ func loadConfig() (*config, []string, error) {
 
 	if cfg.IsBackup() {
 		activeNetParams.IsBackup = true
-		activeNetParams.BackupDir = cfg.BackupDir
+		activeNetParams.BackupDir = cfg.DataDir + "/backup"
 	}
 
 	if cfg.IsPreload() {
 		activeNetParams.IsPreload = true
 		activeNetParams.PreloadFromAddr = cfg.PreloadFromAddr
-		activeNetParams.PreloadDir = cfg.PreloadDir
+		activeNetParams.PreloadDir = cfg.DataDir + "/preload"
 	}
 
 	if cfg.IsBackupFromGenesis() {

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/utility/httprequest"
 )
 
@@ -42,7 +43,7 @@ type JsonResponse struct {
 }
 
 //preloadDatabase call to backuped database node ...
-func preloadDatabase(chainID int, url string, preloadDir string, dataDir string) error {
+func preloadDatabase(chainID int, currentEpoch uint64, url string, preloadDir string, dataDir string, db incdb.Database) error {
 
 	//Send a json http request to backup database node
 	header := http.Header{}
@@ -51,7 +52,7 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 	req := JsonRequest{
 		Jsonrpc: "2.0",
 		Method:  "preload",
-		Params:  []int{chainID},
+		Params:  []float64{float64(chainID), float64(currentEpoch)},
 		Id:      1,
 	}
 
@@ -91,6 +92,10 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 		}
 
 		if jsonRes.Error.Code != -1001 {
+			if jsonRes.Error.Code == -12001 {
+				fmt.Println("No need to preload")
+				return nil
+			}
 			fmt.Println("pkg blockchain {preloadDatabase} jsonRes.Error.Code:", jsonRes.Error.Code)
 			return err
 		}
@@ -130,14 +135,18 @@ func preloadDatabase(chainID int, url string, preloadDir string, dataDir string)
 		return err
 	}
 
+	db.Close()
+	db.Clear()
+	defer db.ReOpen()
+
 	err = Uncompress(path+"/"+resp.Header.Get("File-Name"), dataDir)
 	if err != nil {
 		return err
 	}
-	if chainID == 0 {
-		fmt.Println(path+"/"+resp.Header.Get("File-Name"), dataDir)
-		// panic(0)
-	}
+	// if chainID == 0 {
+	// 	fmt.Println(path+"/"+resp.Header.Get("File-Name"), dataDir)
+	// panic(0)
+	// }
 	return nil
 }
 

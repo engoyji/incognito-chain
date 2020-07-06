@@ -1,22 +1,11 @@
 package blockchain
 
 func (blockchain *BlockChain) PreloadShardChainData(shardID byte) error {
-	err := blockchain.GetShardChainDatabase(shardID).Close()
-	if err != nil {
-		return err
-	}
-	err = blockchain.GetShardChainDatabase(shardID).Clear()
-	if err != nil {
-		return err
-	}
-	err = preloadDatabase(int(shardID), blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
+	// we will force preload whole shard database
+	err := preloadDatabase(int(shardID), 0, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir, blockchain.GetShardChainDatabase(shardID))
 	if err != nil {
 		Logger.log.Error(err)
 		//panic(err)
-	}
-	err = blockchain.GetShardChainDatabase(shardID).ReOpen()
-	if err != nil {
-		return err
 	}
 	if err := blockchain.RestoreShardViews(shardID); err != nil {
 		return err

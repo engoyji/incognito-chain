@@ -108,6 +108,9 @@ const (
 
 	// feature reward
 	GetRewardFeatureByFeatureNameError
+
+	// preload
+	EpochIsLessOrEqual
 )
 
 // Standard JSON-RPC 2.0 errors.
@@ -218,6 +221,9 @@ var ErrCodeMessage = map[int]struct {
 
 	// feature reward
 	GetRewardFeatureByFeatureNameError: {-11001, "Get feature reward by feature name error"},
+
+	// preload
+	EpochIsLessOrEqual: {-12001, "Epoch of chain is less or equal to the requestor"},
 }
 
 // RPCError represents an error that is used as a part of a JSON-RPC JsonResponse

@@ -14,7 +14,7 @@ import (
 func (httpServer *HttpServer) handlePreloadRequest(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 
 	arrayParams := common.InterfaceSlice(params)
-	if arrayParams == nil || len(arrayParams) != 1 {
+	if arrayParams == nil || len(arrayParams) != 2 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Invalid params"))
 	}
 
@@ -22,11 +22,16 @@ func (httpServer *HttpServer) handlePreloadRequest(params interface{}, closeChan
 	if !ok {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Shard ID component invalid"))
 	}
-
-	//filePath := "./data/full_node/backup"
+	epoch, ok := arrayParams[1].(float64)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Epoch component invalid"))
+	}
 	filePath := httpServer.config.ChainParams.BackupDir
 	if shardID == -1 || shardID == 255 {
 		filePath += "/beacon"
+		if float64(httpServer.config.BlockChain.GetBeaconBestState().Epoch) <= epoch {
+			return nil, rpcservice.NewRPCError(rpcservice.EpochIsLessOrEqual, fmt.Errorf("Provider epoch is %v", epoch))
+		}
 	} else {
 		filePath = filePath + "/shard" + strconv.Itoa(int(shardID))
 	}

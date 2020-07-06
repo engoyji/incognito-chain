@@ -104,23 +104,18 @@ func (blockchain *BlockChain) initChainState() error {
 
 	// Determine the state of the chain database. We may need to initialize
 	// everything from scratch or upgrade certain buckets.
-	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
 
 	//FOR TESTING ONLY
 	// Preload data from a trusted full node
 	if blockchain.config.ChainParams.IsPreload {
-		err := blockchain.GetBeaconChainDatabase().Close()
-		if err != nil {
-			return err
+		epoch := uint64(1)
+		if err := blockchain.RestoreBeaconViews(); err == nil {
+			epoch = blockchain.GetBeaconBestState().Epoch
 		}
-		err = preloadDatabase(255, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir)
+		err := preloadDatabase(255, epoch, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir, blockchain.GetBeaconChainDatabase())
 		if err != nil {
 			Logger.log.Error(err)
 			//panic(err)
-		}
-		err = blockchain.GetBeaconChainDatabase().ReOpen()
-		if err != nil {
-			return err
 		}
 	}
 	///
@@ -206,6 +201,7 @@ func (blockchain *BlockChain) initShardState(shardID byte) error {
 }
 
 func (blockchain *BlockChain) initBeaconState() error {
+	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
 	initBeaconBestState := NewBeaconBestStateWithConfig(blockchain.config.ChainParams)
 	initBlock := blockchain.config.ChainParams.GenesisBeaconBlock
 	err := initBeaconBestState.initBeaconBestState(initBlock, blockchain, blockchain.GetBeaconChainDatabase())
@@ -445,6 +441,7 @@ func (blockchain *BlockChain) BackupBeaconViews(db incdb.KeyValueWriter) error {
 Restart all BeaconView from Database
 */
 func (blockchain *BlockChain) RestoreBeaconViews() error {
+	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
 	allViews := []*BeaconBestState{}
 	b, err := rawdbv2.GetBeaconViews(blockchain.GetBeaconChainDatabase())
 	if err != nil {
