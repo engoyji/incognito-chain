@@ -60,6 +60,7 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 
 	go s.syncShardProcess()
 	go s.insertShardBlockFromPool()
+	go s.BackupDatabase()
 
 	go func() {
 		ticker := time.NewTicker(time.Millisecond * 500)
@@ -260,4 +261,20 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		}
 	}
 
+}
+
+//BackupDatabase ...
+func (s *ShardSyncProcess) BackupDatabase() error {
+	ticker := time.Tick(50 * time.Millisecond)
+	go func() {
+		for {
+			select {
+			case <-ticker:
+				if s.isCatchUp {
+					s.Chain.BackupDatabase()
+				}
+			}
+		}
+	}()
+	return nil
 }
