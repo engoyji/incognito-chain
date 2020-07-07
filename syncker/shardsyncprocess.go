@@ -265,7 +265,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 
 //BackupDatabase ...
 func (s *ShardSyncProcess) BackupDatabase() error {
-	ticker := time.Tick(50 * time.Millisecond)
+	ticker := time.Tick(5 * time.Second)
 	go func() {
 		for {
 			select {

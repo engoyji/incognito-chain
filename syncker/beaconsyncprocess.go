@@ -283,7 +283,7 @@ func (s *BeaconSyncProcess) syncBeacon() {
 
 //BackupDatabase ...
 func (s *BeaconSyncProcess) BackupDatabase() error {
-	ticker := time.Tick(50 * time.Millisecond)
+	ticker := time.Tick(5 * time.Second)
 	go func() {
 		for {
 			select {
