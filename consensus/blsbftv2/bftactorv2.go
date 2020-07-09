@@ -52,6 +52,10 @@ func (e BLSBFT_V2) IsOngoing() bool {
 	return e.isStarted
 }
 
+func (e BLSBFT_V2) IsStarted() bool {
+	return e.isStarted
+}
+
 type ProposeBlockInfo struct {
 	block      common.BlockInterface
 	votes      map[string]BFTVote //pk->BFTVote
@@ -64,8 +68,8 @@ func (e *BLSBFT_V2) GetConsensusName() string {
 }
 
 func (e *BLSBFT_V2) Stop() error {
-	fmt.Println("debug BLS stop")
 	if e.isStarted {
+		e.Logger.Info("stop bls-bft2 consensus for chain", e.ChainKey)
 		select {
 		case <-e.StopCh:
 			return nil
@@ -181,10 +185,12 @@ func (e *BLSBFT_V2) Start() error {
 
 				if newTimeSlot { //for logging
 					e.Logger.Info("")
+					e.Logger.Info("======================================================")
+					e.Logger.Info("")
 					if proposerPk.GetMiningKeyBase58(common.BlsConsensus) == userPk {
-						e.Logger.Infof("================== TS: %v , PROPOSE BLOCK %v", common.CalculateTimeSlot(e.currentTime), bestView.GetHeight()+1)
+						e.Logger.Infof("TS: %v , PROPOSE BLOCK %v", common.CalculateTimeSlot(e.currentTime), bestView.GetHeight()+1)
 					} else {
-						e.Logger.Infof("================== TS: %v , LISTEN BLOCK %v", common.CalculateTimeSlot(e.currentTime), bestView.GetHeight()+1)
+						e.Logger.Infof("TS: %v , LISTEN BLOCK %v", common.CalculateTimeSlot(e.currentTime), bestView.GetHeight()+1)
 					}
 				}
 
@@ -329,7 +335,7 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 	//e.Logger.Debug(validVote, len(view.GetCommittee()), errVote)
 	v.hasNewVote = false
 	if validVote > 2*len(view.GetCommittee())/3 {
-		e.Logger.Infof("================== Commit block %v , height: %v", blockHash, v.block.GetHeight())
+		e.Logger.Infof("Commit block %v , height: %v", blockHash, v.block.GetHeight())
 		committeeBLSString, err := incognitokey.ExtractPublickeysFromCommitteeKeyList(view.GetCommittee(), common.BlsConsensus)
 		//fmt.Println(committeeBLSString)
 		if err != nil {

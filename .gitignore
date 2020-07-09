@@ -43,6 +43,9 @@ constant-*
 constant_*
 incognito-*
 incognito_*
+batchdb/*
+batchdb_backup/*
+*.tar.gz
 
 pkg
 src/.com
@@ -69,6 +72,5 @@ bin/data
 *.swo
 *~
 tags
-.txt
-
-run_new_local.sh
+*.txt
+*.log

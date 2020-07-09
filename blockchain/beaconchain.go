@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/incognitochain/incognito-chain/multiview"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -16,7 +17,7 @@ type BeaconChain struct {
 
 	BlockGen      *BlockGenerator
 	Blockchain    *BlockChain
-	ChainName     string
+	hashHistory *lru.Cache
 	Ready         bool //when has peerstate
 	readyBackupDB bool // Catch up with network and ready backup database
 

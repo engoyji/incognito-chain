@@ -11,6 +11,7 @@ const (
 	ErrInvalidHashType                        = "invalid hash type"
 	ErrInvalidBigIntType                      = "invalid big int type"
 	ErrInvalidCommitteeStateType              = "invalid committee state type"
+	ErrInvalidStakerInfoType                  = "invalid staker info type"
 	ErrInvalidPaymentAddressType              = "invalid payment address type"
 	ErrInvalidIncognitoPublicKeyType          = "invalid incognito public key type"
 	ErrInvalidCommitteeRewardStateType        = "invalid reward receiver state type "
@@ -203,6 +204,8 @@ const (
 	GetAllRewardFeatureError
 	ResetAllFeatureRewardByTokenIDError
 	GetRewardFeatureAmountByTokenIDError
+
+	InvalidStakerInfoTypeError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -328,7 +331,9 @@ var ErrCodeMessage = map[int]struct {
 	StoreRewardFeatureError:              {-15000, "Store reward feature state error"},
 	GetRewardFeatureError:                {-15001, "Get reward feature state error"},
 	GetAllRewardFeatureError:             {-15002, "Get all reward feature state error"},
-	GetRewardFeatureAmountByTokenIDError: {-15003, "Get reward feature amount by tokenID error"},
+	ResetAllFeatureRewardByTokenIDError:  {-15003, "Reset all reward feature state by tokenID error"},
+	GetRewardFeatureAmountByTokenIDError: {-15004, "Get reward feature amount by tokenID error"},
+	InvalidStakerInfoTypeError:           {-15005, "Staker info invalid"},
 }
 
 type StatedbError struct {

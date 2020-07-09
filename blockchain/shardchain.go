@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/incognitochain/incognito-chain/multiview"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -17,6 +18,7 @@ type ShardChain struct {
 
 	BlockGen      *BlockGenerator
 	Blockchain    *BlockChain
+	hashHistory *lru.Cache
 	ChainName     string
 	Ready         bool
 	readyBackupDB bool // Catch up with network and ready backup database
