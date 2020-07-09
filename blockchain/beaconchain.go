@@ -17,7 +17,8 @@ type BeaconChain struct {
 
 	BlockGen      *BlockGenerator
 	Blockchain    *BlockChain
-	hashHistory *lru.Cache
+	hashHistory   *lru.Cache
+	ChainName     string
 	Ready         bool //when has peerstate
 	readyBackupDB bool // Catch up with network and ready backup database
 
