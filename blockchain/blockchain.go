@@ -169,7 +169,10 @@ func (blockchain *BlockChain) initChainState() error {
 func (blockchain *BlockChain) initShardState(shardID byte) error {
 	// fmt.Println("[optimize-beststate] Blockchain.initShardState()")
 	blockchain.ShardChain[shardID] = NewShardChain(int(shardID), multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
-
+	blockchain.ShardChain[shardID].hashHistory, err = lru.New(1000)
+	if err != nil {
+		return err
+	}
 	initShardState := NewBestStateShardWithConfig(shardID, blockchain.config.ChainParams)
 	// Create a new block from genesis block and set it as best block of chain
 	initShardBlock := ShardBlock{}
@@ -210,6 +213,10 @@ func (blockchain *BlockChain) initShardState(shardID byte) error {
 
 func (blockchain *BlockChain) initBeaconState() error {
 	blockchain.BeaconChain = NewBeaconChain(multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.BeaconChainKey)
+	blockchain.BeaconChain.hashHistory, err = lru.New(1000)
+	if err != nil {
+		return err
+	}
 	initBeaconBestState := NewBeaconBestStateWithConfig(blockchain.config.ChainParams)
 	initBlock := blockchain.config.ChainParams.GenesisBeaconBlock
 	err := initBeaconBestState.initBeaconBestState(initBlock, blockchain, blockchain.GetBeaconChainDatabase())
