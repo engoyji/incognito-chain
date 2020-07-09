@@ -97,6 +97,7 @@ var SelectBeaconNodeMainnetSerializedPaymentAddressV2 = make(map[uint64][]string
 var SelectShardNodeMainnetSerializedPubkeyV2 = make(map[uint64][]string)
 var SelectShardNodeMainnetSerializedPaymentAddressV2 = make(map[uint64][]string)
 var MainnetReplaceCommitteeEpoch = []uint64{}
+var MainnetEpochSwitchNewStakingTxMap = []uint64{}
 
 // END CONSTANT for network MAINNET
 
@@ -157,6 +158,7 @@ var SelectBeaconNodeTestnetSerializedPaymentAddressV2 = make(map[uint64][]string
 var SelectShardNodeTestnetSerializedPubkeyV2 = make(map[uint64][]string)
 var SelectShardNodeTestnetSerializedPaymentAddressV2 = make(map[uint64][]string)
 var TestnetReplaceCommitteeEpoch = []uint64{}
+var TestnetEpochSwitchNewStakingTxMap = []uint64{}
 
 var IsTestNet = true
 

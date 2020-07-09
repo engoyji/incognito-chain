@@ -421,3 +421,39 @@ func DeleteShardSlashRootHash(db incdb.KeyValueWriter, shardID byte, height uint
 	}
 	return nil
 }
+
+func StoreMapStakingTxNew(db incdb.KeyValueWriter, epoch uint64, mStakingTx map[string]string) error {
+	key := NewStakingTXPrefix
+	data, err := json.Marshal(StakingTXInfo{
+		Epoch:      epoch,
+		MStakingTX: mStakingTx,
+	})
+	if err != nil {
+		return err
+	}
+	err = db.Put(key, data)
+	return err
+}
+
+func GetMapStakingTxNew(db incdb.KeyValueReader) (*StakingTXInfo, error) {
+	key := NewStakingTXPrefix
+	data, err := db.Get(key)
+	if err != nil {
+		return nil, NewRawdbError(GetShardStakingTxMapError, err)
+	}
+	value := &StakingTXInfo{}
+	err = json.Unmarshal(data, value)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func DeleteMapStakingTxNew(db incdb.KeyValueWriter) error {
+	key := NewStakingTXPrefix
+	err := db.Delete(key)
+	if err != nil {
+		return NewRawdbError(GetShardStakingTxMapError, err)
+	}
+	return nil
+}

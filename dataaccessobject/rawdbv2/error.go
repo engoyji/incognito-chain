@@ -83,6 +83,9 @@ const (
 	StoreRelayingBNBHeaderError
 	GetRelayingBNBHeaderError
 	GetBNBDataHashError
+
+	GetShardStakingTxMapError
+	DeleteShardStakingTxMapError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -164,6 +167,9 @@ var ErrCodeMessage = map[int]struct {
 	StoreRelayingBNBHeaderError: {-5001, "Store relaying header bnb error"},
 	GetRelayingBNBHeaderError:   {-5002, "Get relaying header bnb error"},
 	GetBNBDataHashError:         {-5003, "Get bnb data hash by block height error"},
+
+	GetShardStakingTxMapError:    {-5004, "Get shard staking tx map err"},
+	DeleteShardStakingTxMapError: {-5005, "Delete shard staking tx map err"},
 }
 
 type RawdbError struct {

@@ -2,8 +2,9 @@ package rawdbv2
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"sort"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 // key prefix
@@ -16,6 +17,9 @@ var (
 	PDEContributionStatusPrefix  = []byte("pdecontributionstatus-")
 	PDETradeStatusPrefix         = []byte("pdetradestatus-")
 	PDEWithdrawalStatusPrefix    = []byte("pdewithdrawalstatus-")
+
+	//Staking TX
+	NewStakingTXPrefix = []byte("newstakingtxstatus-")
 )
 
 // TODO - change json to CamelCase
@@ -113,3 +117,16 @@ func BuildWaitingPDEContributionKey(
 	waitingPDEContribByBCHeightPrefix := append(WaitingPDEContributionPrefix, beaconHeightBytes...)
 	return append(waitingPDEContribByBCHeightPrefix, []byte(pairID)...)
 }
+
+type StakingTXInfo struct {
+	MStakingTX map[string]string
+	Epoch      uint64
+}
+
+// func (sInfo *StakingTXInfo) ToBytes() []byte {
+
+// }
+
+// func (sInfo *StakingTXInfo) FromByte(value []byte) error {
+// 	return nil
+// }

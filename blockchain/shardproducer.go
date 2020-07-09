@@ -3,12 +3,14 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"math/rand"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -138,7 +140,7 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 	// build txs with metadata
 	transactionsForNewBlock, err = blockchain.BuildResponseTransactionFromTxsWithMetadata(curView, transactionsForNewBlock, &tempPrivateKey, shardID)
 	// process instruction from beacon block
-	shardPendingValidator, _, _ = blockchain.processInstructionFromBeacon(curView, beaconBlocks, shardID, newCommitteeChange())
+	shardPendingValidator, _, _, _ = blockchain.processInstructionFromBeacon(curView, beaconBlocks, shardID, newCommitteeChange())
 	// Create Instruction
 	instructions, _, _, err = blockchain.generateInstruction(curView, shardID, beaconHeight, isOldBeaconHeight, beaconBlocks, shardPendingValidator, currentCommitteePubKeys)
 	if err != nil {
@@ -459,7 +461,17 @@ func (blockGenerator *BlockGenerator) buildResponseTxsFromBeaconInstructions(cur
 //	- stake instruction format
 //	 + ["stake", "pubkey1,pubkey2,..." "shard" "txStake1,txStake2,..." "rewardReceiver1,rewardReceiver2,..." flag]
 //	 + ["stake", "pubkey1,pubkey2,..." "beacon" "txStake1,txStake2,..." "rewardReceiver1,rewardReceiver2,..." flag]
-func (blockchain *BlockChain) processInstructionFromBeacon(curView *ShardBestState, beaconBlocks []*BeaconBlock, shardID byte, committeeChange *committeeChange) ([]string, []string, map[string]string) {
+func (blockchain *BlockChain) processInstructionFromBeacon(
+	curView *ShardBestState,
+	beaconBlocks []*BeaconBlock,
+	shardID byte,
+	committeeChange *committeeChange,
+) (
+	[]string,
+	[]string,
+	map[string]string,
+	[]string,
+) {
 	newShardPendingValidator := []string{}
 	shardPendingValidator := []string{}
 	if curView != nil {
@@ -472,8 +484,30 @@ func (blockchain *BlockChain) processInstructionFromBeacon(curView *ShardBestSta
 
 	assignInstructions := [][]string{}
 	stakingTx := make(map[string]string)
+	rmStakingTx := []string{}
 	for _, beaconBlock := range beaconBlocks {
+		beaconConsensusRootHash, err := blockchain.GetBeaconConsensusRootHash(blockchain.GetBeaconChainDatabase(), beaconBlock.GetHeight())
+		if err != nil {
+			panic(errors.Errorf("Beacon Consensus Root Hash of Height %+v not found ,error %+v", beaconBlock.GetHeight(), err))
+		}
+		beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusRootHash, statedb.NewDatabaseAccessWarper(blockchain.GetBeaconChainDatabase()))
+		if err != nil {
+			panic(err)
+		}
+		_, autoStaking := statedb.GetRewardReceiverAndAutoStaking(beaconConsensusStateDB, blockchain.GetShardIDs())
 		for _, l := range beaconBlock.Body.Instructions {
+			if l[0] == SwapAction {
+				for _, outPublicKey := range strings.Split(l[2], ",") {
+					// If out public key has auto staking then ignore this public key
+					res, ok := autoStaking[outPublicKey]
+					if ok && res {
+						continue
+					}
+					if _, ok := curView.StakingTx[outPublicKey]; ok {
+						rmStakingTx = append(rmStakingTx, outPublicKey)
+					}
+				}
+			}
 			// Process Assign Instruction
 			if l[0] == AssignAction && l[2] == "shard" {
 				if strings.Compare(l[3], strconv.Itoa(int(shardID))) == 0 {
@@ -525,7 +559,7 @@ func (blockchain *BlockChain) processInstructionFromBeacon(curView *ShardBestSta
 			}
 		}
 	}
-	return shardPendingValidator, newShardPendingValidator, stakingTx
+	return shardPendingValidator, newShardPendingValidator, stakingTx, rmStakingTx
 }
 
 //	Generate Instruction generate instruction for new shard block

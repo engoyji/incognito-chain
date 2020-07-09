@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 
 	"github.com/incognitochain/incognito-chain/multiview"
 
@@ -170,6 +171,7 @@ func (blockchain *BlockChain) initShardState(shardID byte) error {
 	if err != nil {
 		return err
 	}
+	go blockchain.InitNewShardStakingTxMap(shardID)
 	return nil
 }
 
@@ -532,4 +534,103 @@ func (blockchain *BlockChain) GetBeaconChainDatabase() incdb.Database {
 
 func (blockchain *BlockChain) GetShardChainDatabase(shardID byte) incdb.Database {
 	return blockchain.config.DataBase[int(shardID)]
+}
+
+func (blockchain *BlockChain) InitNewShardStakingTxMap(shardID byte) error {
+	sDB := blockchain.GetShardChainDatabase(shardID)
+	bDB := blockchain.GetBeaconChainDatabase()
+	stakingInfo, err := rawdbv2.GetMapStakingTxNew(sDB)
+	if err != nil {
+		stakingInfo = &rawdbv2.StakingTXInfo{
+			MStakingTX: map[string]string{},
+			Epoch:      1,
+		}
+	}
+	currentEpoch := blockchain.GetBeaconBestState().BeaconHeight / blockchain.config.ChainParams.Epoch
+	for e := stakingInfo.Epoch; e < currentEpoch; e++ {
+		epochBlks, err := FetchBeaconBlockFromHeight(bDB, (e-1)*blockchain.config.ChainParams.Epoch+1, e*blockchain.config.ChainParams.Epoch)
+		if err != nil {
+			Logger.log.Error(err)
+			return err
+		}
+		newMap, err := blockchain.GetMapStakingTxFromBeaconBlock(stakingInfo.MStakingTX, epochBlks, shardID)
+		rawdbv2.StoreMapStakingTxNew(sDB, e+1, newMap)
+		stakingInfo.Epoch = e + 1
+		stakingInfo.MStakingTX = newMap
+		if common.IndexOfUint64(e, blockchain.config.ChainParams.EpochBreakPointSwapNewKey) > -1 {
+			return nil
+		}
+	}
+	return nil
+}
+
+func (blockchain *BlockChain) GetMapStakingTxFromBeaconBlock(curMap map[string]string, bcBlks []*BeaconBlock, sID byte) (map[string]string, error) {
+	for _, bcBlk := range bcBlks {
+		beaconConsensusRootHash, err := blockchain.GetBeaconConsensusRootHash(blockchain.GetBeaconChainDatabase(), bcBlk.GetHeight())
+		if err != nil {
+			return nil, fmt.Errorf("Beacon Consensus Root Hash of Height %+v not found ,error %+v", bcBlk.GetHeight(), err)
+		}
+		beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusRootHash, statedb.NewDatabaseAccessWarper(blockchain.GetBeaconChainDatabase()))
+		if err != nil {
+			return nil, err
+		}
+		_, autoStaking := statedb.GetRewardReceiverAndAutoStaking(beaconConsensusStateDB, blockchain.GetShardIDs())
+		for _, l := range bcBlk.Body.Instructions {
+			switch l[0] {
+			case SwapAction:
+				for _, outPublicKey := range strings.Split(l[2], ",") {
+					// If out public key has auto staking then ignore this public key
+					res, ok := autoStaking[outPublicKey]
+					if ok && res {
+						continue
+					}
+					delete(curMap, outPublicKey)
+				}
+			case StakeAction:
+				switch l[2] {
+				case "beacon":
+					beacon := strings.Split(l[1], ",")
+					newBeaconCandidates := []string{}
+					newBeaconCandidates = append(newBeaconCandidates, beacon...)
+					if len(l) == 6 {
+						for i, v := range strings.Split(l[3], ",") {
+							txHash, err := common.Hash{}.NewHashFromStr(v)
+							if err != nil {
+								continue
+							}
+							_, _, _, err = blockchain.GetTransactionByHashWithShardID(*txHash, sID)
+							if err != nil {
+								continue
+							}
+							// if transaction belong to this shard then add to shard beststate
+							curMap[newBeaconCandidates[i]] = v
+						}
+					}
+				case "shard":
+					shard := strings.Split(l[1], ",")
+					newShardCandidates := []string{}
+					newShardCandidates = append(newShardCandidates, shard...)
+					if len(l) == 6 {
+						for i, v := range strings.Split(l[3], ",") {
+							txHash, err := common.Hash{}.NewHashFromStr(v)
+							if err != nil {
+								continue
+							}
+							_, _, _, err = blockchain.GetTransactionByHashWithShardID(*txHash, sID)
+							if err != nil {
+								continue
+							}
+							// if transaction belong to this shard then add to shard beststate
+							curMap[newShardCandidates[i]] = v
+						}
+					}
+				default:
+					continue
+				}
+			default:
+				continue
+			}
+		}
+	}
+	return curMap, nil
 }
