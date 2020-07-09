@@ -423,7 +423,11 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	if len(invalidTxs) > 0 {
 		return NewBlockChainError(TransactionCreatedByMinerError, fmt.Errorf("There are %d invalid txs", len(invalidTxs)))
 	}
-	err = blockchain.ValidateResponseTransactionFromTxsWithMetadata(shardBlock)
+	err = blockchain.ValidateResponseTransactionFromTxsWithMetadata(shardBlock, curView)
+	if err != nil {
+		return NewBlockChainError(ResponsedTransactionWithMetadataError, err)
+	}
+	err = blockchain.ValidateResponseTransactionFromBeaconInstructions(curView, shardBlock, beaconBlocks, shardID)
 	if err != nil {
 		return NewBlockChainError(ResponsedTransactionWithMetadataError, err)
 	}
@@ -461,7 +465,7 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlockForSigning(curView *S
 	if err != nil {
 		return err
 	}
-	shardPendingValidator, _, _ := blockchain.processInstructionFromBeacon(curView, beaconBlocks, shardID, newCommitteeChange()) // "[optimize-beststate]"
+	shardPendingValidator, _, _ := blockchain.processInstructionFromBeacon(curView, beaconBlocks, shardID, newCommitteeChange())
 	if curView.BeaconHeight == shardBlock.Header.BeaconHeight {
 		isOldBeaconHeight = true
 	}
@@ -627,8 +631,13 @@ func (oldBestState *ShardBestState) updateShardBestState(blockchain *BlockChain,
 		return nil, err
 	}
 	for stakePublicKey, txHash := range stakingTx {
-		shardBestState.StakingTx[stakePublicKey] = txHash
+		shardBestState.StakingTx.Set(stakePublicKey, txHash)
+		if err := statedb.StoreStakerInfoAtShardDB(shardBestState.consensusStateDB, stakePublicKey, txHash); err != nil {
+			Logger.log.Error(stakePublicKey, txHash, err)
+			return nil, errors.New("Cannot store staker info")
+		}
 	}
+
 	if common.IndexOfUint64(shardBlock.Header.BeaconHeight/blockchain.config.ChainParams.Epoch, blockchain.config.ChainParams.EpochBreakPointSwapNewKey) > -1 {
 		err = shardBestState.processShardBlockInstructionForKeyListV2(blockchain, shardBlock, committeeChange)
 	} else {
@@ -675,7 +684,10 @@ func (shardBestState *ShardBestState) initShardBestState(blockchain *BlockChain,
 	}
 	shardBestState.ShardPendingValidator = append(shardBestState.ShardPendingValidator, shardPendingValidatorStr...)
 	for stakePublicKey, txHash := range stakingTx {
-		shardBestState.StakingTx[stakePublicKey] = txHash
+		shardBestState.StakingTx.Set(stakePublicKey, txHash)
+		if err := statedb.StoreStakerInfoAtShardDB(shardBestState.consensusStateDB, stakePublicKey, txHash); err != nil {
+			return err
+		}
 	}
 	err = shardBestState.processShardBlockInstruction(blockchain, genesisShardBlock, newCommitteeChange())
 	if err != nil {
@@ -758,13 +770,14 @@ func (shardBestState *ShardBestState) processShardBlockInstruction(blockchain *B
 			if len(l[2]) != 0 && l[2] != "" {
 				swapedCommittees = strings.Split(l[2], ",")
 			}
-			for _, v := range swapedCommittees {
-				if txId, ok := shardBestState.StakingTx[v]; ok {
-					if checkReturnStakingTxExistence(txId, shardBlock) {
-						delete(shardBestState.StakingTx, v)
-					}
-				}
-			}
+			//This code never run
+			//for _, v := range swapedCommittees {
+			//	if txId, ok := shardBestState.StakingTx.data[v]; ok {
+			//		if checkReturnStakingTxExistence(txId, shardBlock) {
+			//			shardBestState.StakingTx.Remove(v)
+			//		}
+			//	}
+			//}
 			if !reflect.DeepEqual(swapedCommittees, shardSwappedCommittees) {
 				return NewBlockChainError(SwapValidatorError, fmt.Errorf("Expect swapped committees to be %+v but get %+v", swapedCommittees, shardSwappedCommittees))
 			}
@@ -890,6 +903,7 @@ func (shardBestState *ShardBestState) verifyPostProcessingShardBlock(shardBlock 
 	if hash, isOk := verifyHashFromStringArray(shardPendingValidatorStr, shardBlock.Header.PendingValidatorRoot); !isOk {
 		return NewBlockChainError(ShardPendingValidatorRootHashError, fmt.Errorf("Expect shard pending validator root hash to be %+v but get %+v", shardBlock.Header.PendingValidatorRoot, hash))
 	}
+
 	if hash, isOk := verifyHashFromMapStringString(shardBestState.StakingTx, shardBlock.Header.StakingTxRoot); !isOk {
 		return NewBlockChainError(ShardPendingValidatorRootHashError, fmt.Errorf("Expect shard staking root hash to be %+v but get %+v", shardBlock.Header.StakingTxRoot, hash))
 	}
@@ -956,7 +970,7 @@ func (blockchain *BlockChain) verifyTransactionFromNewBlock(shardID byte, txs []
 //	- Store Burning Confirmation
 //	- Update Mempool fee estimator
 func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestState, shardBlock *ShardBlock, committeeChange *committeeChange, beaconBlock *BeaconBlock) error {
-	startTimeProcessStoreShardBlock := time.Now()
+
 	shardID := shardBlock.Header.ShardID
 	blockHeight := shardBlock.Header.Height
 	blockHash := shardBlock.Header.Hash()
@@ -1005,9 +1019,6 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 			Logger.log.Debug(NewBlockChainError(RegisterEstimatorFeeError, err))
 		}
 	}
-
-	//fmt.Println("[optimize-beststate] len(committeeChange.shardCommitteeAdded[shardID]):", len(committeeChange.shardCommitteeAdded[shardID]))
-	//fmt.Println("[optimize-beststate] len(committeeChange.shardSubstituteAdded[shardID]):", len(committeeChange.shardSubstituteAdded[shardID]))
 
 	//addedCommittees, removedCommittees, err := getChangeCommittees(newShardState.ShardCommittee, newShardState.ShardCommittee)
 	//addedSubstitutesValidator, removedSubstitutesValidator, err := getChangeCommittees(newShardState.ShardPendingValidator, newShardState.ShardPendingValidator)
@@ -1121,19 +1132,15 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 	newShardState.slashStateDB.ClearObjects()
 
 	batchData := blockchain.GetShardChainDatabase(shardID).NewBatch()
-	if err := rawdbv2.StoreShardConsensusRootHash(batchData, shardID, blockHeight, consensusRootHash); err != nil {
-		return NewBlockChainError(StoreShardBlockError, err)
+	sRH := ShardRootHash{
+		ConsensusStateDBRootHash:   consensusRootHash,
+		FeatureStateDBRootHash:     featureRootHash,
+		RewardStateDBRootHash:      rewardRootHash,
+		SlashStateDBRootHash:       slashRootHash,
+		TransactionStateDBRootHash: transactionRootHash,
 	}
-	if err := rawdbv2.StoreShardTransactionRootHash(batchData, shardID, blockHeight, transactionRootHash); err != nil {
-		return NewBlockChainError(StoreShardBlockError, err)
-	}
-	if err := rawdbv2.StoreShardFeatureRootHash(batchData, shardID, blockHeight, featureRootHash); err != nil {
-		return NewBlockChainError(StoreShardBlockError, err)
-	}
-	if err := rawdbv2.StoreShardCommitteeRewardRootHash(batchData, shardID, blockHeight, rewardRootHash); err != nil {
-		return NewBlockChainError(StoreShardBlockError, err)
-	}
-	if err := rawdbv2.StoreShardSlashRootHash(batchData, shardID, blockHeight, slashRootHash); err != nil {
+
+	if err := rawdbv2.StoreShardRootsHash(batchData, shardID, blockHash, sRH); err != nil {
 		return NewBlockChainError(StoreShardBlockError, err)
 	}
 
@@ -1142,28 +1149,7 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 		return NewBlockChainError(StoreShardBlockError, err)
 	}
 
-	//finalView := blockchain.ShardChain[shardBlock.Header.ShardID].GetFinalView()
 	blockchain.ShardChain[shardBlock.Header.ShardID].multiView.AddView(newShardState)
-	//newFinalView := blockchain.ShardChain[shardBlock.Header.ShardID].GetFinalView()
-	//if finalView != nil && newFinalView.GetHash().String() != finalView.GetHash().String() {
-	//	startView := newFinalView
-	//	for {
-	//		blks, _ := blockchain.GetShardBlockHashByHeight(startView.GetHeight(), shardID)
-	//		for _, hash := range blks {
-	//			if hash.String() != startView.GetHash().String() {
-	//				err := rawdbv2.DeleteShardBlock(blockchain.GetShardChainDatabase(shardID), shardID, startView.GetHeight(), hash)
-	//				if err != nil {
-	//					//must not have error
-	//					panic(err)
-	//				}
-	//			}
-	//		}
-	//		startView = blockchain.ShardChain[shardBlock.Header.ShardID].GetViewByHash(*startView.GetPreviousHash())
-	//		if startView == nil || startView.GetHeight() == finalView.GetHeight() {
-	//			break
-	//		}
-	//	}
-	//}
 
 	err = blockchain.BackupShardViews(batchData, shardBlock.Header.ShardID)
 	if err != nil {
@@ -1173,7 +1159,7 @@ func (blockchain *BlockChain) processStoreShardBlock(newShardState *ShardBestSta
 	if err := batchData.Write(); err != nil {
 		return NewBlockChainError(StoreShardBlockError, err)
 	}
-	shardStoreBlockTimer.UpdateSince(startTimeProcessStoreShardBlock)
+
 	Logger.log.Infof("SHARD %+v | 🔎 %d transactions in block height %+v \n", shardBlock.Header.ShardID, len(shardBlock.Body.Transactions), blockHeight)
 	return nil
 }

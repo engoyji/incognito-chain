@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy"
 )
@@ -256,25 +254,10 @@ func GetAllCommitteeStakeInfo(stateDB *StateDB, shardIDs []int) map[int][]*Stake
 	return stateDB.getShardsCommitteeInfo(shardIDs)
 }
 
-func GetMapStakingTx(bcDB *StateDB, sdb incdb.Database, shardIDs []int, shardID int) map[string]string {
-	res, err := bcDB.getMapStakingTx(shardIDs)
+func GetMapAutoStaking(bcDB *StateDB, shardIDs []int) map[string]bool {
+	res, err := bcDB.getMapAutoStaking(shardIDs)
 	if err != nil {
 		panic(err)
-	}
-	for k, v := range res {
-		var txHash = &common.Hash{}
-		err := (&common.Hash{}).Decode(txHash, v)
-		if err != nil {
-			incdb.Logger.Log.Error(err)
-			delete(res, k)
-			continue
-		}
-		_, _, err = rawdbv2.GetTransactionByHash(sdb, *txHash)
-		if err != nil {
-			incdb.Logger.Log.Warn(err)
-			delete(res, k)
-			continue
-		}
 	}
 	return res
 }
@@ -384,6 +367,41 @@ func DeleteBeaconSubstituteValidator(stateDB *StateDB, beaconSubstitute []incogn
 	return nil
 }
 
+//at shard, the stakingTx is all staker tx from the beginning (with replacement if stake more than once)
+//staker A stake for committee pk B with stakingTx C (B could be not staking any more)
+//staker A stake for committee pk A with staking Tx D
+//we have {B: C,A: D}
+//staker E stake for committee pk B with staking Tx F
+//finally, we have {B: F,A: D};
+//Note1: A and E in same shard,means if A and E in different shard, then there is no replacement
+//Note2: only staking tx is used in this staker info
+
+func StoreStakerInfoAtShardDB(stateDB *StateDB, committeeStr string, stakingTX string) error {
+	var committee = new(incognitokey.CommitteePublicKey)
+	if err := committee.FromString(committeeStr); err != nil {
+		return err
+	}
+	keyBytes, err := committee.RawBytes()
+	if err != nil {
+		fmt.Println("get raw byte fail", err)
+		return err
+	}
+	key := GetStakerInfoKey(keyBytes)
+	value := NewStakerInfo()
+	stakingTXHash, err := common.Hash{}.NewHashFromStr(stakingTX)
+	if err != nil {
+		fmt.Println("import hash fail!", err)
+		return err
+	}
+	value.SetTxStakingID(*stakingTXHash)
+	value.SetRewardReceiver(privacy.PaymentAddress{Pk: privacy.PublicKey{0}, Tk: privacy.TransmissionKey{0}})
+	err = stateDB.SetStateObject(StakerObjectType, key, value)
+	if err != nil {
+		fmt.Println("set state fail!", err)
+	}
+	return err
+}
+
 func storeStakerInfo(
 	stateDB *StateDB,
 	committees []incognitokey.CommitteePublicKey,
@@ -427,12 +445,22 @@ func storeStakerInfo(
 				continue
 			}
 			value.autoStaking = autoStakingValue
+			//Just for temporary fix
+			rewardReceiverPaymentAddress, ok := rewardReceiver[committee.GetIncKeyBase58()]
+			if ok {
+				//If ok, it mean old data will be rewrite
+				value.rewardReceiver = rewardReceiverPaymentAddress
+			}
+			txStakingID, ok := stakingTx[committeeString]
+			if ok {
+				value.txStakingID = txStakingID
+			}
 		}
 		err = stateDB.SetStateObject(StakerObjectType, key, value)
 		if err != nil {
 			return err
 		}
-		delete(autoStaking, committeeString)
+		// delete(autoStaking, committeeString)
 		if _, ok := stakingTx[committeeString]; ok {
 			delete(stakingTx, committeeString)
 		}

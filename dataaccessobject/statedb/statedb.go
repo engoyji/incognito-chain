@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/incognitochain/incognito-chain/dataaccessobject"
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/metrics"
@@ -129,9 +128,7 @@ func (stateDB *StateDB) ClearObjects() {
 func (stateDB *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	stateDB.markDeleteEmptyStateObject(deleteEmptyObjects)
 	for addr := range stateDB.stateObjectsPending {
-		fmt.Println(addr.String())
 		obj := stateDB.stateObjects[addr]
-		fmt.Println(addr.String(), obj)
 		if obj.IsDeleted() {
 			stateDB.deleteStateObject(obj)
 		} else {
@@ -158,13 +155,13 @@ func (stateDB *StateDB) markDeleteEmptyStateObject(deleteEmptyObjects bool) {
 // Commit writes the state to the underlying in-memory trie database.
 func (stateDB *StateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Finalize any pending changes and merge everything into the tries
-	if metrics.EnabledExpensive {
-		defer func(start time.Time) {
-			elapsed := time.Since(start)
-			stateDB.StateObjectCommits += elapsed
-			dataaccessobject.Logger.Log.Infof("StateDB commit and return root hash time %+v", elapsed)
-		}(time.Now())
-	}
+	//if metrics.EnabledExpensive {
+	//	defer func(start time.Time) {
+	//		elapsed := time.Since(start)
+	//		stateDB.StateObjectCommits += elapsed
+	//		dataaccessobject.Logger.Log.Infof("StateDB commit and return root hash time %+v", elapsed)
+	//	}(time.Now())
+	//}
 	stateDB.IntermediateRoot(deleteEmptyObjects)
 
 	if len(stateDB.stateObjectsDirty) > 0 {
@@ -331,7 +328,6 @@ func (stateDB *StateDB) getOrNewStateObjectWithValue(objectType int, hash common
 	}
 	if stateObject == nil {
 		stateObject, _, err = stateDB.createStateObjectWithValue(objectType, hash, value)
-		fmt.Println("DEBUG", objectType, hash, value, err)
 		if err != nil {
 			return nil, err
 		}
@@ -626,6 +622,24 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 	return currentValidator, substituteValidator, nextEpochShardCandidate, currentEpochShardCandidate, nextEpochBeaconCandidate, currentEpochBeaconCandidate
 }
 
+func (stateDB *StateDB) IterateWithStaker(prefix []byte) []*StakerInfo {
+	m := []*StakerInfo{}
+	temp := stateDB.trie.NodeIterator(prefix)
+	it := trie.NewIterator(temp)
+	for it.Next() {
+		value := it.Value
+		newValue := make([]byte, len(value))
+		copy(newValue, value)
+		committeeState := NewStakerInfo()
+		err := json.Unmarshal(newValue, committeeState)
+		if err != nil {
+			panic(err)
+		}
+		m = append(m, committeeState)
+	}
+	return m
+}
+
 func (stateDB *StateDB) iterateWithCommitteeState(prefix []byte) []*CommitteeState {
 	m := []*CommitteeState{}
 	temp := stateDB.trie.NodeIterator(prefix)
@@ -733,15 +747,77 @@ func (stateDB *StateDB) getShardsCommitteeInfo(sIDs []int) (curValidatorInfo map
 	return curValidatorInfo
 }
 
-func (stateDB *StateDB) getMapStakingTx(ids []int) (map[string]string, error) {
+func (stateDB *StateDB) getMapAllStaker() (map[string]string, error) {
+
+	//allStaker := []*CommitteeState{}
+	//mapStakingTx := map[string]string{}
+	//for _, shardID := range ids {
+	//	// Current Validator
+	//	prefixCurrentValidator := GetCommitteePrefixWithRole(CurrentValidator, shardID)
+	//	resCurrentValidator := stateDB.iterateWithCommitteeState(prefixCurrentValidator)
+	//	allStaker = append(allStaker, resCurrentValidator...)
+	//	// Substitute Validator
+	//	prefixSubstituteValidator := GetCommitteePrefixWithRole(SubstituteValidator, shardID)
+	//	resSubstituteValidator := stateDB.iterateWithCommitteeState(prefixSubstituteValidator)
+	//	allStaker = append(allStaker, resSubstituteValidator...)
+	//}
+	//// next epoch candidate
+	//prefixNextEpochCandidate := GetCommitteePrefixWithRole(NextEpochShardCandidate, -2)
+	//resNextEpochCandidate := stateDB.iterateWithCommitteeState(prefixNextEpochCandidate)
+	//allStaker = append(allStaker, resNextEpochCandidate...)
+	//// current epoch candidate
+	//prefixCurrentEpochCandidate := GetCommitteePrefixWithRole(CurrentEpochShardCandidate, -2)
+	//resCurrentEpochCandidate := stateDB.iterateWithCommitteeState(prefixCurrentEpochCandidate)
+	//allStaker = append(allStaker, resCurrentEpochCandidate...)
+	//
+	//// next epoch candidate
+	//prefixNextEpochBeaconCandidate := GetCommitteePrefixWithRole(NextEpochBeaconCandidate, -2)
+	//resNextEpochBeaconCandidate := stateDB.iterateWithCommitteeState(prefixNextEpochBeaconCandidate)
+	//allStaker = append(allStaker, resNextEpochBeaconCandidate...)
+	//// current epoch candidate
+	//prefixCurrentEpochBeaconCandidate := GetCommitteePrefixWithRole(CurrentEpochBeaconCandidate, -2)
+	//resCurrentEpochBeaconCandidate := stateDB.iterateWithCommitteeState(prefixCurrentEpochBeaconCandidate)
+	//allStaker = append(allStaker, resCurrentEpochBeaconCandidate...)
+	//for _, v := range allStaker {
+	//	pubKeyBytes, _ := v.committeePublicKey.RawBytes()
+	//	key := GetStakerInfoKey(pubKeyBytes)
+	//	stakerInfo, has, err := stateDB.getStakerInfo(key)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	pKey, err := v.committeePublicKey.ToBase58()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	if (!has) || (stakerInfo == nil) {
+	//		return nil, errors.Errorf("Can not found staker info for this committee public key %v", pKey)
+	//	}
+	//	if stakerInfo.txStakingID.String() != common.HashH([]byte{0}).String() {
+	//		mapStakingTx[pKey] = stakerInfo.txStakingID.String()
+	//	}
+	//}
+	return nil, nil
+}
+
+func (stateDB *StateDB) getMapAutoStaking(ids []int) (map[string]bool, error) {
 	allStaker := []*CommitteeState{}
-	mapStakingTx := map[string]string{}
+	mapAutoStaking := map[string]bool{}
+
+	// Current Beacon Validator
+	prefixCurrentValidator := GetCommitteePrefixWithRole(CurrentValidator, -1)
+	resCurrentValidator := stateDB.iterateWithCommitteeState(prefixCurrentValidator)
+	allStaker = append(allStaker, resCurrentValidator...)
+	// Substitute Beacon Validator
+	prefixSubstituteValidator := GetCommitteePrefixWithRole(SubstituteValidator, -1)
+	resSubstituteValidator := stateDB.iterateWithCommitteeState(prefixSubstituteValidator)
+	allStaker = append(allStaker, resSubstituteValidator...)
+
 	for _, shardID := range ids {
-		// Current Validator
+		// Current Shard Validator
 		prefixCurrentValidator := GetCommitteePrefixWithRole(CurrentValidator, shardID)
 		resCurrentValidator := stateDB.iterateWithCommitteeState(prefixCurrentValidator)
 		allStaker = append(allStaker, resCurrentValidator...)
-		// Substitute Validator
+		// Substitute Shard sValidator
 		prefixSubstituteValidator := GetCommitteePrefixWithRole(SubstituteValidator, shardID)
 		resSubstituteValidator := stateDB.iterateWithCommitteeState(prefixSubstituteValidator)
 		allStaker = append(allStaker, resSubstituteValidator...)
@@ -778,10 +854,12 @@ func (stateDB *StateDB) getMapStakingTx(ids []int) (map[string]string, error) {
 			return nil, errors.Errorf("Can not found staker info for this committee public key %v", pKey)
 		}
 		if stakerInfo.txStakingID.String() != common.HashH([]byte{0}).String() {
-			mapStakingTx[pKey] = stakerInfo.txStakingID.String()
+			mapAutoStaking[pKey] = stakerInfo.autoStaking
+		} else {
+			mapAutoStaking[pKey] = false
 		}
 	}
-	return mapStakingTx, nil
+	return mapAutoStaking, nil
 }
 
 // ================================= Reward Request OBJECT =======================================

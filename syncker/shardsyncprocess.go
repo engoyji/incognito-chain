@@ -226,7 +226,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		case blk := <-ch:
 			if !isNil(blk) {
 				blockBuffer = append(blockBuffer, blk)
-				Logger.Infof("Syncker shard receive block %v", blk.GetHeight())
+				//Logger.Infof("Syncker shard receive block %v", blk.GetHeight())
 				if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
 					time.Sleep(5 * time.Second)
 				}
@@ -244,7 +244,6 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 					} else {
 						insertBlkCnt += successBlk
 						fmt.Printf("Syncker Insert %d shard %d block(from %d to %d) elaspse %f \n", successBlk, s.shardID, blockBuffer[0].GetHeight(), blockBuffer[len(blockBuffer)-1].GetHeight(), time.Since(time1).Seconds())
-						fmt.Printf("[monitor-db-time] Syncker Insert %d shard %d block(from %d to %d) elaspse %f \n", successBlk, s.shardID, blockBuffer[0].GetHeight(), blockBuffer[len(blockBuffer)-1].GetHeight(), time.Since(time1).Seconds())
 						if successBlk >= len(blockBuffer) {
 							break
 						}
