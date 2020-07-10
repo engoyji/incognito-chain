@@ -113,6 +113,8 @@ const (
 	// Init State Root hash
 	InitStateRootHash
 
+	GetAllBeaconViews
+
 	// Restore
 	RestoreBeaconCommittee
 	RestoreShardCommittee
@@ -246,6 +248,7 @@ var ErrCodeMessage = map[int]struct {
 	RestoreCandidateBeaconWaitingForNextRandom:    {-12006, "Restore candidate beacon waiting for next random"},
 	RestoreCandidateShardWaitingForCurrentRandom:  {-12007, "Restore candidate shard waiting for current random"},
 	RestoreCandidateShardWaitingForNextRandom:     {-12008, "Restore candidate shard waiting for next random"},
+	GetAllBeaconViews:                             {-12009, "Get all beacon views"},
 }
 
 // RPCError represents an error that is used as a part of a JSON-RPC JsonResponse
