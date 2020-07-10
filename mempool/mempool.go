@@ -3,13 +3,14 @@ package mempool
 import (
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"math"
 	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/pubsub"
 
@@ -1043,6 +1044,13 @@ func (tp *TxPool) ValidateSerialNumberHashH(serialNumber []byte) error {
 func (tp *TxPool) EmptyPool() bool {
 	tp.candidateMtx.Lock()
 	defer tp.candidateMtx.Unlock()
+	tp.mtx.Lock()
+	defer tp.mtx.Unlock()
+	tp.requestStopStakingMtx.Lock()
+	defer tp.requestStopStakingMtx.Unlock()
+	tp.roleMtx.Lock()
+	defer tp.roleMtx.Unlock()
+
 	if len(tp.pool) == 0 && len(tp.poolSerialNumbersHashList) == 0 && len(tp.poolCandidate) == 0 {
 		return true
 	}
