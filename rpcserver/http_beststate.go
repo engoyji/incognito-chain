@@ -25,7 +25,7 @@ func (httpServer *HttpServer) handleGetBeaconBestState(params interface{}, close
 
 	err = beaconBestState.InitStateRootHash(httpServer.config.BlockChain)
 	if err != nil {
-		panic(err)
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
 	}
 
 	//best block
