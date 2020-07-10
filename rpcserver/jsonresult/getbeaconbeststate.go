@@ -136,8 +136,11 @@ func NewGetBeaconBestState(data *blockchain.BeaconBestState) *GetBeaconBestState
 		}
 	}
 	result.AutoStaking = make(map[string]bool)
-	for k, v := range data.AutoStaking.GetMap() {
-		result.AutoStaking[k] = v
+	if data.AutoStaking != nil {
+		for k, v := range data.AutoStaking.GetMap() {
+			result.AutoStaking[k] = v
+		}
 	}
+
 	return result
 }
