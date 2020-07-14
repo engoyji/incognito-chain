@@ -49,6 +49,7 @@ require (
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/minio/sha256-simd v0.1.1 // indirect
+	github.com/mmcloughlin/avo v0.0.0-20200523190732-4439b6b2c061 // indirect
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/multiformats/go-multihash v0.0.8 // indirect
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
@@ -72,6 +73,7 @@ require (
 	google.golang.org/api v0.10.0
 	google.golang.org/grpc v1.27.1
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
+	gopkg.in/yaml.v2 v2.2.8
 	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc // indirect
 	stathat.com/c/consistent v1.0.0
 

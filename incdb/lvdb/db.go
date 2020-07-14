@@ -3,7 +3,6 @@ package lvdb
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/klauspost/compress/s2"
 
 	"github.com/pkg/errors"
 
@@ -344,7 +345,7 @@ func removeUnusedBackupDatabase(filePath string) error {
 
 func compress(src string, buf io.Writer) error {
 	// tar > gzip > buf
-	zr := gzip.NewWriter(buf)
+	zr := s2.NewWriter(buf)
 	tw := tar.NewWriter(zr)
 
 	// walk through every file in the folder

@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/klauspost/compress/s2"
 
 	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/utility/httprequest"
@@ -181,10 +182,8 @@ func Uncompress(srcPath, desPath string) error {
 //uncompress ...
 func uncompress(src io.Reader, dst string) error {
 	// ungzip
-	zr, err := gzip.NewReader(src)
-	if err != nil {
-		return err
-	}
+
+	zr := s2.NewReader(src)
 	// untar
 	tr := tar.NewReader(zr)
 
@@ -205,7 +204,7 @@ func uncompress(src io.Reader, dst string) error {
 		// check the type
 		switch header.Typeflag {
 
-		// if its a dir and it doesn't exist create it (with 0755 permission)
+		// if its a dir and it doesn't exist create it (with 0700 permission)
 		case tar.TypeDir:
 			if _, err := os.Stat(target); err != nil {
 				if err := os.MkdirAll(target, 0700); err != nil {
