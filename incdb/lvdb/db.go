@@ -368,6 +368,7 @@ func compress(src string, buf io.Writer) error {
 		// if not a dir, write file content
 		if !fi.IsDir() {
 			data, err := os.Open(file)
+			defer data.Close()
 			if err != nil {
 				return err
 			}
