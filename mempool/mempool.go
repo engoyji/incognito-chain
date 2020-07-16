@@ -262,6 +262,8 @@ func (tp *TxPool) MaybeAcceptTransactionForBlockProducing(tx metadata.Transactio
 		Logger.log.Error(err)
 		return nil, err
 	}
+	committees, err := beaconView.GetAllCommitteeValidatorCandidateFlattenListFromDatabase()
+	Logger.log.Infof("[DEBUG-StopAutoStaking] list committee get from maybe accept txs %v", committees)
 	_, txDesc, err := tp.maybeAcceptTransaction(shardView, beaconView, tx, false, false, int64(bHeight))
 	if err != nil {
 		Logger.log.Error(err)
