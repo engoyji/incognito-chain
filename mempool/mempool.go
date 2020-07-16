@@ -3,13 +3,14 @@ package mempool
 import (
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"math"
 	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/pubsub"
 
@@ -225,6 +226,9 @@ func (tp *TxPool) MaybeAcceptTransaction(tx metadata.Transaction, beaconHeight i
 	}
 	beaconView := tp.config.BlockChain.BeaconChain.GetFinalView().(*blockchain.BeaconBestState)
 	shardView := tp.config.BlockChain.ShardChain[senderShardID].GetBestView().(*blockchain.ShardBestState)
+	beaconBestView := tp.config.BlockChain.BeaconChain.GetBestView().(*blockchain.BeaconBestState)
+	Logger.log.Infof("[DEBUG-StopAutoStaking] Validate with beacon final height %v, beacon height %v best height at beacon %v, best beacon height at shard %v", beaconView.GetHeight(), beaconHeight, beaconBestView.GetHeight(), shardView.GetBeaconHeight())
+
 	//==========
 	if uint64(len(tp.pool)) >= tp.config.MaxTx {
 		return nil, nil, NewMempoolTxError(MaxPoolSizeError, errors.New("Pool reach max number of transaction"))
