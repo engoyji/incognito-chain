@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"archive/tar"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +8,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 
-	"github.com/klauspost/compress/s2"
-
+	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/utility/httprequest"
 )
@@ -140,10 +137,11 @@ func preloadDatabase(chainID int, currentEpoch uint64, url string, preloadDir st
 	db.Clear()
 	defer db.ReOpen()
 
-	err = Uncompress(path+"/"+resp.Header.Get("File-Name"), dataDir)
+	err = uncompress(path+"/"+resp.Header.Get("File-Name"), dataDir)
 	if err != nil {
 		return err
 	}
+
 	// if chainID == 0 {
 	// 	fmt.Println(path+"/"+resp.Header.Get("File-Name"), dataDir)
 	// panic(0)
@@ -152,11 +150,10 @@ func preloadDatabase(chainID int, currentEpoch uint64, url string, preloadDir st
 }
 
 //Uncompress file from zip file
-func Uncompress(srcPath, desPath string) error {
+func uncompress(srcPath, desPath string) error {
 
 	//uncompress write
 	//Remove all old data
-	fd, _ := os.Open(srcPath)
 	if err := os.RemoveAll(srcPath); err != nil {
 		panic(err)
 	}
@@ -173,59 +170,9 @@ func Uncompress(srcPath, desPath string) error {
 		panic(err)
 	}
 
-	if err := uncompress(fd, desPath); err != nil {
+	err := common.DecompressDatabaseBackup(srcPath, desPath)
+	if err != nil {
 		return err
 	}
-	return nil
-}
-
-//uncompress ...
-func uncompress(src io.Reader, dst string) error {
-	// ungzip
-
-	zr := s2.NewReader(src)
-	// untar
-	tr := tar.NewReader(zr)
-
-	// uncompress each element
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, header.Name)
-
-		// if no join is needed, replace with ToSlash:
-		// target = filepath.ToSlash(header.Name)
-
-		// check the type
-		switch header.Typeflag {
-
-		// if its a dir and it doesn't exist create it (with 0700 permission)
-		case tar.TypeDir:
-			if _, err := os.Stat(target); err != nil {
-				if err := os.MkdirAll(target, 0700); err != nil {
-					return err
-				}
-			}
-		// if it's a file create it (with same permission)
-		case tar.TypeReg:
-			fileToWrite, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			if err != nil {
-				return err
-			}
-			// copy over contents
-			if _, err := io.Copy(fileToWrite, tr); err != nil {
-				return err
-			}
-			// manually close here after each file operation; defering would cause each file close
-			// to wait until all operations have completed.
-			fileToWrite.Close()
-		}
-	}
-
 	return nil
 }
