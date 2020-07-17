@@ -127,11 +127,12 @@ func preloadDatabase(chainID int, currentEpoch uint64, url string, preloadDir st
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
+		file.Close()
 		return err
 	}
+	file.Close()
 
 	db.Close()
 	db.Clear()
@@ -154,14 +155,10 @@ func uncompress(srcPath, desPath string) error {
 
 	//uncompress write
 	//Remove all old data
-	if err := os.RemoveAll(srcPath); err != nil {
-		panic(err)
-	}
-	//Create new data
-	if err := os.MkdirAll(srcPath, 0700); err != nil {
-		panic(err)
-	}
-
+	// if err := os.RemoveAll(srcPath); err != nil {
+	// 	panic(err)
+	// }
+	fmt.Println("start decompress")
 	if err := os.RemoveAll(desPath); err != nil {
 		panic(err)
 	}
@@ -174,5 +171,10 @@ func uncompress(srcPath, desPath string) error {
 	if err != nil {
 		return err
 	}
+	if err := os.RemoveAll(srcPath); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("done decompress")
 	return nil
 }

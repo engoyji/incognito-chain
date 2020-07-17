@@ -119,8 +119,7 @@ func (blockchain *BlockChain) initChainState() error {
 		}
 		err := preloadDatabase(255, epoch, blockchain.config.ChainParams.PreloadFromAddr, blockchain.config.ChainParams.PreloadDir, blockchain.config.ChainParams.DataDir, blockchain.GetBeaconChainDatabase())
 		if err != nil {
-			Logger.log.Error(err)
-			//panic(err)
+			return err
 		}
 	}
 	///

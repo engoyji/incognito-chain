@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go v0.38.0
-	github.com/0xBahamoot/go-bigcompressor v1.0.0
+	github.com/0xBahamoot/go-bigcompressor v1.0.1
 	github.com/0xsirrush/color v1.7.0
 	github.com/allegro/bigcache v1.2.1
 	github.com/aristanetworks/goarista v0.0.0-20190704150520-f44d68189fd7 // indirect
